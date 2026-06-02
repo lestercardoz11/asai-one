@@ -46,9 +46,11 @@ export default async function HomePage() {
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-navy-900 text-white">
+      {/* Fills exactly one screen: 100dvh minus the sticky header (utility bar
+          h-9 = 36px + main bar h-16 + 1px border ≈ 65px = 101px). */}
+      <section className="relative flex min-h-[calc(100dvh-101px)] items-center overflow-hidden bg-navy-900 text-white">
         <div className="absolute inset-0 bg-grid opacity-[0.15]" aria-hidden />
-        <div className="container-page relative grid gap-10 py-20 lg:grid-cols-12 lg:items-center lg:py-28">
+        <div className="container-page relative grid w-full gap-10 py-12 lg:grid-cols-12 lg:items-center">
           <div className="lg:col-span-7">
             <span className="type-mono inline-flex items-center gap-2 text-navy-200">
               <span aria-hidden className="h-px w-6 bg-navy-300" />
@@ -98,7 +100,7 @@ export default async function HomePage() {
             </dl>
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="hidden lg:col-span-5 lg:block">
             <div className="relative mx-auto aspect-square max-w-md border border-navy-700">
               <ProductImage
                 art={{ pattern: "compass", accent: 300, tone: "navy", seed: "hero" }}
