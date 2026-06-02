@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ASAI.One
 
-## Getting Started
+**Mode-based commuter essentials** — an ecommerce storefront where you shop by *how you commute*. Built design-first: a fully clickable, responsive storefront on **mock data** for client look-and-feel sign-off, before any backend is wired.
 
-First, run the development server:
+This repository currently delivers **Phases 0–2** of the [Phased Build Plan](./build-plan.md). See [`docs/PHASE-0-2-DELIVERY.md`](./docs/PHASE-0-2-DELIVERY.md) for what was built, the decisions taken, and the Phase 3 handoff.
+
+## Stack
+
+- **Framework** — Next.js 16 (App Router, Turbopack, React 19)
+- **Language** — TypeScript
+- **Styling** — Tailwind CSS v4 + design tokens (`app/globals.css`)
+- **Components** — a bespoke, dependency-free component library (primitives + storefront) hand-built in the MOTO aesthetic
+- **Aesthetic** — MOTO "Minimal Street": Navy × White / Off-White, type-led, sharp-edged
+- **Fonts** — Bebas Neue (display) · Barlow Condensed (nav/buttons) · Barlow (body) · DM Mono (labels)
+- **Data** — backend-agnostic mock adapter (`lib/data`); Supabase planned for Phase 3
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. The storefront is the home experience; the repurposed admin preview lives at `/admin`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key conventions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Money is integer paise** everywhere; format only at display via `formatINR()`.
+- **Variants are first-class** — the attribute-based model handles simple toggles
+  (pack / tier) and the two-axis DryLock case (weight × pack) from one shape.
+- **Data goes through `lib/data`** — components never read mock data directly, so
+  Phase 3 is a data-source swap, not a redesign.
