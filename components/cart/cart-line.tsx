@@ -17,7 +17,7 @@ export function CartLine({ line }: { line: CartLineType }) {
     <div className="flex gap-4 py-5">
       <Link
         href={`/product/${product.slug}`}
-        className="block h-24 w-24 shrink-0 border border-ink-12"
+        className="relative block h-24 w-24 shrink-0 overflow-hidden border border-ink-12 bg-white"
       >
         <ProductImage art={product.images[0]} alt={product.title} />
       </Link>

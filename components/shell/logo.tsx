@@ -28,8 +28,8 @@ export function Logo({
         // crisp white silhouette so it stays legible.
         className={cn("h-7 w-7", tone === "white" && "brightness-0 invert")}
       />
-      <span className="font-display text-2xl leading-none tracking-[0.04em]">
-        ASAI<span className={tone === "white" ? "text-navy-200" : "text-navy-400"}>.ONE</span>
+      <span className="font-display inline-flex items-baseline text-2xl leading-none tracking-[0.04em]">
+        ASAI<span className="text-lg leading-none text-[#225777]">.One</span>
       </span>
     </span>
   );

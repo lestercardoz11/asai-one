@@ -17,7 +17,8 @@ import {
 
 const NAV = [
   { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop" }
+  { label: "Shop", href: "/shop" },
+  { label: "About Us", href: "/about" },
 ];
 
 export function SiteHeader() {

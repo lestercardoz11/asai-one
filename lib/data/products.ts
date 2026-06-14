@@ -21,9 +21,7 @@ export const PRODUCTS: Product[] = [
       "Absrb is a thin, high-loft pad that lines the brow and crown of your helmet, drawing sweat off your skin before it stings your eyes or sours the foam. Each pad is good for a week of commuting, then you peel and replace — no washing, no drying, no helmet funk. Sized to fit every full-face and open-face shell.",
     basePrice: rupees(299),
     images: [
-      { pattern: "absorb", accent: 500, tone: "warm", seed: "absrb-a" },
-      { pattern: "absorb", accent: 700, tone: "white", seed: "absrb-b" },
-      { pattern: "compass", accent: 600, tone: "navy", seed: "absrb-c" },
+      { src: "/images/asai-absrd.webp", pattern: "absorb", accent: 500, tone: "white", seed: "absrb-a" },
     ],
     features: [
       "Wicks sweat away from the brow in seconds",
@@ -80,9 +78,9 @@ export const PRODUCTS: Product[] = [
       "ChildLock is a padded harness that loops around the rider and secures your child to your back, so a tired grip or a sudden brake never becomes a fall. The buckle is one-hand operable with gloves on, the strap is reflective for low light, and the whole thing folds into a jacket pocket when you're riding solo.",
     basePrice: rupees(899),
     images: [
-      { pattern: "lock", accent: 600, tone: "white", seed: "cl-a" },
-      { pattern: "lock", accent: 800, tone: "navy", seed: "cl-b" },
-      { pattern: "compass", accent: 500, tone: "warm", seed: "cl-c" },
+      { src: "/images/asai-childlock-1.webp", pattern: "lock", accent: 600, tone: "white", seed: "cl-a" },
+      { src: "/images/asai-childlock-2.webp", pattern: "lock", accent: 800, tone: "white", seed: "cl-b" },
+      { src: "/images/asai-childlock-3.webp", pattern: "compass", accent: 500, tone: "white", seed: "cl-c" },
     ],
     features: [
       "Anchors child to rider, not the grab-rail",
@@ -130,9 +128,7 @@ export const PRODUCTS: Product[] = [
       "Toss a DryLock pod into your helmet, top-box or glove and it pulls the damp out overnight — no more clammy foam or that wet-dog smell after the monsoon ride home. When the indicator window turns pink, microwave or sun-dry the pod and it's good as new. Pick the size for the space and the pack for how many corners of your kit need drying.",
     basePrice: rupees(149),
     images: [
-      { pattern: "pods", accent: 500, tone: "white", seed: "dl-a" },
-      { pattern: "pods", accent: 700, tone: "warm", seed: "dl-b" },
-      { pattern: "rings", accent: 600, tone: "navy", seed: "dl-c" },
+      { src: "/images/asai-drylock-pods.webp", pattern: "pods", accent: 500, tone: "white", seed: "dl-a" },
     ],
     features: [
       "Pulls moisture from helmets, gloves & top-boxes",
@@ -230,9 +226,8 @@ export const PRODUCTS: Product[] = [
       "PureRide seals against your face and filters the exhaust, dust and particulate you'd otherwise breathe for an hour a day. The exhale valve vents heat and moisture so your visor stays clear at the signal, and the contoured shell sits flush under any helmet. Advance adds an active carbon layer for heavier traffic corridors.",
     basePrice: rupees(1299),
     images: [
-      { pattern: "rings", accent: 500, tone: "white", seed: "pr-a" },
-      { pattern: "rings", accent: 700, tone: "navy", seed: "pr-b" },
-      { pattern: "compass", accent: 600, tone: "warm", seed: "pr-c" },
+      { src: "/images/asai-pureride-1.webp", pattern: "rings", accent: 500, tone: "white", seed: "pr-a" },
+      { src: "/images/asai-pureride-2.webp", pattern: "rings", accent: 700, tone: "white", seed: "pr-b" },
     ],
     features: [
       "Filters exhaust, dust & particulate",
@@ -248,7 +243,7 @@ export const PRODUCTS: Product[] = [
     ],
     reviewSummary: { rating: 4.4, count: 129 },
     shippingPolicy: "Ships in 48h · Free over ₹499",
-    returnPolicy: "returnable",
+    returnPolicy: "non_returnable",
     isBestSeller: false,
     isNew: true,
     published: true,
@@ -288,9 +283,7 @@ export const PRODUCTS: Product[] = [
       "Shield is the layer you keep stuffed under the seat for the ride that turns on you — windproof, water-repellent and lit up with reflective piping for the dark commute home. Basic blocks wind and light rain; Advance adds a taped-seam membrane and a thermal liner for the cold, wet months. Packs into its own chest pocket.",
     basePrice: rupees(1799),
     images: [
-      { pattern: "shield", accent: 600, tone: "navy", seed: "sh-a" },
-      { pattern: "shield", accent: 500, tone: "white", seed: "sh-b" },
-      { pattern: "compass", accent: 700, tone: "warm", seed: "sh-c" },
+      { src: "/images/asai-shield.webp", pattern: "shield", accent: 600, tone: "white", seed: "sh-a" },
     ],
     features: [
       "Windproof & water-repellent shell",

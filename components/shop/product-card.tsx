@@ -76,7 +76,7 @@ export function ProductCard({
             </span>
             <span className="inline-flex items-center gap-1 type-mono">
               <ReturnIcon className="h-3.5 w-3.5" />
-              {product.returnPolicy === "returnable" ? "Returnable" : "Final sale"}
+              {product.returnPolicy === "returnable" ? "Returnable" : "Non-Returnable"}
             </span>
           </div>
         </div>

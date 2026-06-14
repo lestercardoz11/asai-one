@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProduct, getProducts } from "@/lib/data";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -58,7 +59,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             {product.isNew && <Badge tone="new">New</Badge>}
             {product.isBestSeller && <Badge tone="soon">Best Seller</Badge>}
             <Badge tone={product.returnPolicy === "returnable" ? "returnable" : "non-returnable"}>
-              {product.returnPolicy === "returnable" ? "Returnable" : "Final sale"}
+              {product.returnPolicy === "returnable" ? "Returnable" : "Non-Returnable"}
             </Badge>
           </div>
 
@@ -90,6 +91,23 @@ export default async function ProductPage({ params }: { params: Params }) {
             />
             <PolicyTile Icon={ShieldIcon} label="Secure" value="Encrypted checkout" />
           </div>
+
+          {/* Product-specific return policy takes precedence over the general one. */}
+          <p className="mt-3 text-[12px] leading-snug text-ink-30">
+            This item is{" "}
+            <span className="text-navy-800">
+              {product.returnPolicy === "returnable" ? "returnable" : "non-returnable"}
+            </span>
+            . Return eligibility varies by product; this product-specific policy takes
+            precedence over our general{" "}
+            <Link
+              href="/refund-policy"
+              className="text-navy-500 underline-offset-4 hover:underline"
+            >
+              Refund Policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
 

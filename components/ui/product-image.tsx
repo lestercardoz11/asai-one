@@ -1,12 +1,12 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { ArtDescriptor } from "@/lib/types";
 
 /**
- * Branded SVG artwork standing in for product photography during Phase 2.
- * Each pattern is a deterministic, technical-blueprint composition that fits the
- * MOTO aesthetic (motorsport timing-board / urban wayfinding / spec sheet). When
- * real photography arrives (Phase 0/3) this component is swapped for <Image />
- * behind the same call sites.
+ * Product imagery. When the descriptor carries a real photo (`art.src`) we render
+ * an optimised next/image; otherwise we fall back to the branded SVG blueprint
+ * art that fits the MOTO aesthetic (motorsport timing-board / spec sheet). Real
+ * photos drop in behind the same call sites — callers don't change.
  */
 
 const NAVY: Record<number, string> = {
@@ -54,6 +54,22 @@ export function ProductImage({
   className?: string;
   priority?: boolean;
 }) {
+  // Real photography: fill the (already square, white) call-site container and
+  // contain so the whole product is shown without cropping. `preload` replaces
+  // the Next 16-deprecated `priority` prop for above-the-fold shots.
+  if (art.src) {
+    return (
+      <Image
+        src={art.src}
+        alt={alt}
+        fill
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
+        preload={priority || undefined}
+        className={cn("object-contain", className)}
+      />
+    );
+  }
+
   const ground = TONES[art.tone];
   const isDark = art.tone === "navy";
   const ink = isDark ? "#ffffff" : "#0a0a0a";

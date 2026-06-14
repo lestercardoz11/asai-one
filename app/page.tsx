@@ -1,11 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getModes, getFeaturedProducts } from "@/lib/data";
 import { buttonVariants } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section";
 import { ModeCard } from "@/components/shop/mode-card";
 import { ProductCard } from "@/components/shop/product-card";
 import { Carousel } from "@/components/shop/carousel";
-import { ProductImage } from "@/components/ui/product-image";
 import {
   ArrowRightIcon,
   TruckIcon,
@@ -47,13 +47,26 @@ export default async function HomePage() {
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       {/* Fills exactly one screen: 100dvh minus the sticky header (utility bar
-          h-9 = 36px + main bar h-16 + 1px border ≈ 65px = 101px). */}
-      <section className="relative flex min-h-[calc(100dvh-101px)] items-center overflow-hidden bg-navy-900 text-white">
-        <div className="absolute inset-0 bg-grid opacity-[0.15]" aria-hidden />
-        <div className="container-page relative grid w-full gap-10 py-12 lg:grid-cols-12 lg:items-center">
-          <div className="lg:col-span-7">
-            <span className="type-mono inline-flex items-center gap-2 text-navy-200">
-              <span aria-hidden className="h-px w-6 bg-navy-300" />
+          h-9 = 36px + main bar h-16 + 1px border ≈ 65px = 101px). A full-bleed
+          commuter photograph carries the section; a left-anchored navy scrim
+          keeps the white copy legible without darkening the whole frame. */}
+      <section className="relative flex min-h-[calc(100dvh-101px)] items-center overflow-hidden text-white">
+        <Image
+          src="/images/hero.webp"
+          alt="ASAI.One rider geared up for the daily commute"
+          fill
+          preload
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-navy-900/85 via-navy-900/55 to-navy-900/20"
+          aria-hidden
+        />
+        <div className="container-page relative w-full py-12">
+          <div className="max-w-2xl">
+            <span className="type-mono inline-flex items-center gap-2 text-navy-100">
+              <span aria-hidden className="h-px w-6 bg-navy-200" />
               Mode-based commuter essentials
             </span>
             <h1 className="type-display mt-5 text-6xl leading-[0.9] text-white sm:text-7xl lg:text-8xl">
@@ -80,7 +93,7 @@ export default async function HomePage() {
                   variant: "secondary",
                   size: "lg",
                   className:
-                    "border-navy-600 bg-transparent text-navy-600 hover:bg-mist-100",
+                    "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
                 })}
               >
                 Browse all
@@ -99,38 +112,27 @@ export default async function HomePage() {
               ))}
             </dl>
           </div>
-
-          <div className="hidden lg:col-span-5 lg:block">
-            <div className="relative mx-auto aspect-square max-w-md border border-navy-700">
-              <ProductImage
-                art={{ pattern: "compass", accent: 300, tone: "navy", seed: "hero" }}
-                alt="ASAI.One — navigate your commute"
-                priority
-              />
-              <span className="absolute bottom-0 left-0 type-mono bg-white px-3 py-2 text-[10px] text-navy-800">
-                ASAI · EST. PUNE
-              </span>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* ── How do you commute? ───────────────────────────────────────────── */}
-      <section className="container-page py-16 sm:py-20">
-        <SectionHeading
-          eyebrow="How do you commute?"
-          title="Choose your mode"
-          subtitle="Pick your commute type to explore the essentials built for it. Three more modes are on the way."
-        />
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {modes.map((mode) => (
-            <ModeCard key={mode.id} mode={mode} />
-          ))}
+      <section className="bg-white py-16 sm:py-20">
+        <div className="container-page">
+          <SectionHeading
+            eyebrow="How do you commute?"
+            title="Choose your mode"
+            subtitle="Pick your commute type to explore the essentials built for it. Three more modes are on the way."
+          />
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {modes.map((mode) => (
+              <ModeCard key={mode.id} mode={mode} />
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ── Featured products ─────────────────────────────────────────────── */}
-      <section className="bg-warm-white py-16 sm:py-20">
+      <section className="bg-white py-16 sm:py-20">
         <div className="container-page">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeading
@@ -155,21 +157,23 @@ export default async function HomePage() {
       </section>
 
       {/* ── Why ASAI.One? ─────────────────────────────────────────────────── */}
-      <section className="container-page py-16 sm:py-20">
-        <SectionHeading
-          eyebrow="Why ASAI.One?"
-          title="Made for the ride, not the shelf"
-          align="center"
-          className="mx-auto"
-        />
-        <div className="mt-12 grid grid-cols-1 gap-px border border-ink-12 bg-ink-12 sm:grid-cols-2 lg:grid-cols-4">
-          {WHY.map(({ Icon, title, body }) => (
-            <div key={title} className="flex flex-col gap-4 bg-white p-7">
-              <Icon className="h-8 w-8 text-navy-500" strokeWidth={1.25} />
-              <h3 className="type-condensed text-sm text-navy-800">{title}</h3>
-              <p className="text-sm leading-relaxed text-ink-60">{body}</p>
-            </div>
-          ))}
+      <section className="bg-white py-16 sm:py-20">
+        <div className="container-page">
+          <SectionHeading
+            eyebrow="Why ASAI.One?"
+            title="Made for the ride, not the shelf"
+            align="center"
+            className="mx-auto"
+          />
+          <div className="mt-12 grid grid-cols-1 gap-px border border-ink-12 bg-ink-12 sm:grid-cols-2 lg:grid-cols-4">
+            {WHY.map(({ Icon, title, body }) => (
+              <div key={title} className="flex flex-col gap-4 bg-white p-7">
+                <Icon className="h-8 w-8 text-navy-500" strokeWidth={1.25} />
+                <h3 className="type-condensed text-sm text-navy-800">{title}</h3>
+                <p className="text-sm leading-relaxed text-ink-60">{body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -31,7 +31,12 @@ export type ReturnPolicy = "returnable" | "non_returnable";
 
 /** Branded SVG art descriptor — stands in for photography in Phase 2. */
 export interface ArtDescriptor {
-  /** Visual pattern family rendered by <ProductImage />. */
+  /**
+   * Real photography served from `/public`. When set, <ProductImage /> renders an
+   * optimised <Image /> from this path and ignores the SVG fallback fields below.
+   */
+  src?: string;
+  /** Visual pattern family rendered by <ProductImage /> when no `src` is given. */
   pattern: "pods" | "shield" | "lock" | "rings" | "absorb" | "compass";
   /** Accent navy step used in the artwork. */
   accent: keyof NavyRamp;

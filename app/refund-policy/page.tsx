@@ -21,13 +21,22 @@ export default function RefundPolicyPage() {
     >
       <PolicySection title="1. Return Eligibility">
         <PolicyCallout>
-          Items must be unused, in their original packaging, and in resalable
-          condition to be eligible for a return.
+          Refund eligibility varies by product. Customers are advised to review the
+          specific product page for detailed return and refund information before
+          making a purchase.
         </PolicyCallout>
         <p>
-          Some items are marked non-returnable on their product page for reasons of
-          hygiene or safety — please check the return badge before ordering. Items that
-          arrive damaged or defective are always eligible; contact us right away.
+          Items must be unused, in their original packaging, and in resalable
+          condition to be eligible for a return.
+        </p>
+        <p>
+          Each product page clearly displays whether the item is{" "}
+          <strong className="font-semibold text-navy-800">Returnable</strong> or{" "}
+          <strong className="font-semibold text-navy-800">Non-Returnable</strong> —
+          please check the return badge before ordering. Where a product page states a
+          return policy, that product-specific policy takes precedence over this general
+          policy. Items that arrive damaged or defective are always eligible; contact us
+          right away.
         </p>
       </PolicySection>
 

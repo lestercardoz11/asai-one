@@ -33,7 +33,7 @@ export function ProductGallery({
               aria-label={`View ${i + 1}`}
               aria-current={i === active}
               className={cn(
-                "h-20 w-20 border bg-white transition-colors",
+                "relative h-20 w-20 overflow-hidden border bg-white transition-colors",
                 i === active ? "border-navy-800" : "border-ink-12 hover:border-navy-300",
               )}
             >
