@@ -74,7 +74,7 @@ function validateAddress(a: AddressInput): string | null {
     if (!v) return "Please complete all required address fields.";
     if (v.length > max) return "One of the address fields is too long.";
   }
-  if ((a.line2 ?? "").length > 200) return "One of the address fields is too long.";
+  if ((a.line2 ?? "").trim().length > 200) return "One of the address fields is too long.";
   if (!toE164(a.phone)) return "Please enter a valid phone number.";
   if (!/^\d{4,10}$/.test(a.pin.trim())) return "Please enter a valid PIN code.";
   return null;
