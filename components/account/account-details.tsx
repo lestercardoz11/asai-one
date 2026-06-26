@@ -297,6 +297,7 @@ function PhoneEditor({
       onSaved(e164);
     } else {
       setError(result.message);
+      toast({ title: "Verification failed", description: result.message, variant: "error" });
     }
   }
 
