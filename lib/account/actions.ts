@@ -134,6 +134,10 @@ export async function requestEmailChange(email: string): Promise<AccountResult> 
   if (!EMAIL_RE.test(trimmed) || trimmed.length > 254) {
     return { ok: false, message: "Please enter a valid email address." };
   }
+
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ email: trimmed });
   if (error) {
@@ -149,6 +153,10 @@ export async function requestPhoneChange(
 ): Promise<AccountResult & { phone?: string }> {
   const e164 = toE164(phone);
   if (!e164) return { ok: false, message: "Enter a valid 10-digit number." };
+
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+
   // Prevent SMS toll-fraud: 3 sends per number per hour + a per-IP cap.
   const ip = await clientIp();
   if (
@@ -179,7 +187,11 @@ export async function confirmPhoneChange(phone: string, token: string): Promise<
     return actionError("phone_change_verify", error, "That code is invalid or expired.");
   }
   if (data.user) {
-    await supabase.from("profiles").update({ phone: e164 }).eq("id", data.user.id);
+    const { error: syncError } = await supabase
+      .from("profiles")
+      .update({ phone: e164 })
+      .eq("id", data.user.id);
+    if (syncError) console.error("account:phone_change_sync", syncError);
   }
   revalidatePath("/account");
   return { ok: true, message: "Your phone number has been updated." };
