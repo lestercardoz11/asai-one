@@ -9,8 +9,7 @@ import { getProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/format";
 import { UserIcon, TruckIcon, ArrowRightIcon } from "@/components/icons";
-import { AccountDetails } from "@/components/account/account-details";
-import type { AccountDetailsData } from "@/components/account/account-details";
+import { AccountDetails, type AccountDetailsData } from "@/components/account/account-details";
 import { AddressEditor } from "@/components/account/address-editor";
 import type { AddressInput } from "@/lib/account/actions";
 
