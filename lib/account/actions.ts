@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth/user";
+import { clientIp, withinRateLimit } from "@/lib/security/rate-limit";
 
 export type AccountResult = { ok: boolean; message: string };
 
@@ -119,4 +120,67 @@ export async function updateDefaultAddress(input: AddressInput): Promise<Account
 
   revalidatePath("/account");
   return { ok: true, message: "Your default address has been saved." };
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Begin an email change. Supabase emails a confirmation link to the new
+ * address; the change only takes effect once the user clicks it. We therefore
+ * do NOT touch profiles.email here — it reconciles out-of-band.
+ */
+export async function requestEmailChange(email: string): Promise<AccountResult> {
+  const trimmed = email.trim();
+  if (!EMAIL_RE.test(trimmed) || trimmed.length > 254) {
+    return { ok: false, message: "Please enter a valid email address." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ email: trimmed });
+  if (error) {
+    // Fail closed on provider/SMTP misconfiguration — generic message, no raw leak.
+    return actionError("email_change", error, "Email change is temporarily unavailable. Please try again later.");
+  }
+  return { ok: true, message: "Check your inbox — we've sent a link to confirm your new email." };
+}
+
+/** Begin a phone change: send an OTP to the new number via Supabase. */
+export async function requestPhoneChange(
+  phone: string,
+): Promise<AccountResult & { phone?: string }> {
+  const e164 = toE164(phone);
+  if (!e164) return { ok: false, message: "Enter a valid 10-digit number." };
+  // Prevent SMS toll-fraud: 3 sends per number per hour + a per-IP cap.
+  const ip = await clientIp();
+  if (
+    !(await withinRateLimit({ key: `phonechange:${e164}`, limit: 3, windowSeconds: 3600 })) ||
+    !(await withinRateLimit({ key: `phonechange-ip:${ip}`, limit: 15, windowSeconds: 3600 }))
+  ) {
+    return { ok: false, message: "Too many code requests. Please wait before trying again." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ phone: e164 });
+  if (error) {
+    return actionError("phone_change", error, "Phone verification is temporarily unavailable. Please try again later.");
+  }
+  return { ok: true, message: `OTP sent to ${e164}.`, phone: e164 };
+}
+
+/** Confirm a phone change with the OTP, then sync the profiles.phone copy. */
+export async function confirmPhoneChange(phone: string, token: string): Promise<AccountResult> {
+  const e164 = toE164(phone);
+  if (!e164) return { ok: false, message: "Invalid phone number." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone: e164,
+    token: token.trim(),
+    type: "phone_change",
+  });
+  if (error) {
+    return actionError("phone_change_verify", error, "That code is invalid or expired.");
+  }
+  if (data.user) {
+    await supabase.from("profiles").update({ phone: e164 }).eq("id", data.user.id);
+  }
+  revalidatePath("/account");
+  return { ok: true, message: "Your phone number has been updated." };
 }
