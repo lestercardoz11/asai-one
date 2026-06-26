@@ -8,7 +8,11 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { getProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/format";
-import { UserIcon, MailIcon, PhoneIcon, PinIcon, TruckIcon, ArrowRightIcon } from "@/components/icons";
+import { UserIcon, TruckIcon, ArrowRightIcon } from "@/components/icons";
+import { AccountDetails } from "@/components/account/account-details";
+import type { AccountDetailsData } from "@/components/account/account-details";
+import { AddressEditor } from "@/components/account/address-editor";
+import type { AddressInput } from "@/lib/account/actions";
 
 export const metadata: Metadata = {
   title: "My account",
@@ -35,9 +39,27 @@ export default async function AccountPage() {
 
   const { data: address } = await supabase
     .from("addresses")
-    .select("line1, line2, city, state, postal_code")
+    .select("full_name, phone, line1, line2, city, state, postal_code")
     .eq("is_default", true)
     .maybeSingle();
+
+  const detailsData: AccountDetailsData = {
+    fullName: profile.full_name ?? "",
+    email: profile.email ?? "",
+    phone: profile.phone ?? "",
+    marketingOptIn: profile.marketing_opt_in ?? false,
+    whatsappOptIn: profile.whatsapp_opt_in ?? false,
+  };
+
+  const addressForm: AddressInput = {
+    fullName: address?.full_name ?? profile.full_name ?? "",
+    phone: address?.phone ?? profile.phone ?? "",
+    line1: address?.line1 ?? "",
+    line2: address?.line2 ?? "",
+    city: address?.city ?? "",
+    state: address?.state || "Maharashtra",
+    pin: address?.postal_code ?? "",
+  };
 
   return (
     <section className="bg-near-white py-16">
@@ -119,23 +141,8 @@ export default async function AccountPage() {
               </h2>
             </div>
 
-            <dl className="mt-4 flex flex-col gap-px border border-ink-12 bg-ink-12">
-              <Detail Icon={UserIcon} label="Name" value={displayName} />
-              <Detail Icon={MailIcon} label="Email" value={profile.email ?? "—"} />
-              <Detail Icon={PhoneIcon} label="Phone" value={profile.phone ?? "—"} />
-              <Detail
-                Icon={PinIcon}
-                label="Default address"
-                value={
-                  address
-                    ? [address.line1, address.line2, address.city, address.state, address.postal_code]
-                        .filter(Boolean)
-                        .join(", ")
-                    : "Add a default delivery address"
-                }
-                muted={!address}
-              />
-            </dl>
+            <AccountDetails initial={detailsData} />
+            <AddressEditor initial={addressForm} hasAddress={!!address} />
           </section>
         </div>
       </div>
@@ -143,24 +150,3 @@ export default async function AccountPage() {
   );
 }
 
-function Detail({
-  Icon,
-  label,
-  value,
-  muted,
-}: {
-  Icon: (p: { className?: string; "aria-hidden"?: boolean }) => React.ReactElement;
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-3 bg-white p-5">
-      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-      <div>
-        <dt className="type-mono text-ink-30">{label}</dt>
-        <dd className={`mt-1 text-[15px] ${muted ? "text-ink-30" : "text-navy-800"}`}>{value}</dd>
-      </div>
-    </div>
-  );
-}
