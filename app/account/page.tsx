@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Eyebrow } from "@/components/ui/section";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { buttonVariants } from "@/components/ui/button";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { getProfile } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
+import { formatINR } from "@/lib/format";
 import { UserIcon, MailIcon, PhoneIcon, PinIcon, TruckIcon, ArrowRightIcon } from "@/components/icons";
 
 export const metadata: Metadata = {
@@ -10,19 +15,30 @@ export const metadata: Metadata = {
   description: "Your ASAI.One account — orders, details and saved addresses.",
 };
 
-/** Phase 2 demo: hardcoded signed-in-looking user (no real auth/backend). */
-const DEMO_USER = {
-  name: "Aarav Mehta",
-  email: "aarav.mehta@example.com",
-  phone: "+91 98765 43210",
-  address: "Add a default delivery address",
-} as const;
-
 function initialOf(name: string) {
   return name.trim().charAt(0).toUpperCase() || "A";
 }
 
-export default function AccountPage() {
+export default async function AccountPage() {
+  // `proxy.ts` already gates /account, but re-check at the data layer.
+  const profile = await getProfile();
+  if (!profile) redirect("/login?redirect=/account");
+
+  const displayName = profile.full_name?.trim() || profile.email?.split("@")[0] || "Rider";
+
+  const supabase = await createClient();
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, order_number, status, total_paise, placed_at")
+    .order("placed_at", { ascending: false })
+    .limit(10);
+
+  const { data: address } = await supabase
+    .from("addresses")
+    .select("line1, line2, city, state, postal_code")
+    .eq("is_default", true)
+    .maybeSingle();
+
   return (
     <section className="bg-near-white py-16">
       <div className="container-page">
@@ -31,28 +47,24 @@ export default function AccountPage() {
           className="mb-8"
         />
 
-        {/* Header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-reveal">
           <div className="flex items-center gap-4">
             <span
               aria-hidden
               className="inline-flex h-14 w-14 shrink-0 items-center justify-center border border-navy-800 bg-navy-800 type-display text-2xl text-white"
             >
-              {initialOf(DEMO_USER.name)}
+              {initialOf(displayName)}
             </span>
             <div>
               <Eyebrow>My account</Eyebrow>
               <h1 className="mt-1 type-display text-4xl text-navy-800 sm:text-5xl">
-                {DEMO_USER.name}
+                {displayName}
               </h1>
             </div>
           </div>
-          <Link
-            href="/login"
+          <LogoutButton
             className={buttonVariants({ variant: "secondary", size: "md" })}
-          >
-            Log out
-          </Link>
+          />
         </header>
 
         <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-[1.2fr_1fr]">
@@ -65,33 +77,37 @@ export default function AccountPage() {
               </h2>
             </div>
 
-            <div className="mt-4 flex flex-col items-center gap-4 border border-ink-12 bg-white px-6 py-16 text-center">
-              <TruckIcon className="h-8 w-8 text-ink-30" aria-hidden />
-              <div>
-                <p className="type-condensed text-sm text-navy-800">No orders yet</p>
-                <p className="mt-1 text-sm text-ink-60">
-                  When you place an order, it&apos;ll show up here.
-                </p>
+            {orders && orders.length > 0 ? (
+              <ul className="mt-4 flex flex-col gap-px border border-ink-12 bg-ink-12">
+                {orders.map((o) => (
+                  <li key={o.id} className="flex items-center justify-between gap-4 bg-white p-5">
+                    <div>
+                      <p className="type-condensed text-sm text-navy-800">{o.order_number}</p>
+                      <p className="mt-0.5 type-mono text-[10px] uppercase text-ink-30">
+                        {o.status}
+                      </p>
+                    </div>
+                    <p className="font-condensed text-base font-semibold tabular-nums text-navy-800">
+                      {formatINR(o.total_paise)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-4 flex flex-col items-center gap-4 border border-ink-12 bg-white px-6 py-16 text-center">
+                <TruckIcon className="h-8 w-8 text-ink-30" aria-hidden />
+                <div>
+                  <p className="type-condensed text-sm text-navy-800">No orders yet</p>
+                  <p className="mt-1 text-sm text-ink-60">
+                    When you place an order, it&apos;ll show up here.
+                  </p>
+                </div>
+                <Link href="/" className={buttonVariants({ variant: "primary", size: "md" })}>
+                  Start shopping
+                  <ArrowRightIcon className="h-4 w-4" aria-hidden />
+                </Link>
               </div>
-              <Link
-                href="/"
-                className={buttonVariants({ variant: "primary", size: "md" })}
-              >
-                Start shopping
-                <ArrowRightIcon className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-
-            <div className="mt-4 flex items-start gap-3 border border-ink-12 bg-white p-5">
-              <TruckIcon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-              <div>
-                <p className="type-mono text-ink-30">Track order</p>
-                <p className="mt-1 text-sm text-ink-60">
-                  Have an order on the way? You can track it from the confirmation email
-                  or text we send once it ships.
-                </p>
-              </div>
-            </div>
+            )}
           </section>
 
           {/* Account details */}
@@ -104,41 +120,47 @@ export default function AccountPage() {
             </div>
 
             <dl className="mt-4 flex flex-col gap-px border border-ink-12 bg-ink-12">
-              <div className="flex items-start gap-3 bg-white p-5">
-                <UserIcon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-                <div>
-                  <dt className="type-mono text-ink-30">Name</dt>
-                  <dd className="mt-1 text-[15px] text-navy-800">{DEMO_USER.name}</dd>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-white p-5">
-                <MailIcon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-                <div>
-                  <dt className="type-mono text-ink-30">Email</dt>
-                  <dd className="mt-1 text-[15px] text-navy-800">{DEMO_USER.email}</dd>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-white p-5">
-                <PhoneIcon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-                <div>
-                  <dt className="type-mono text-ink-30">Phone</dt>
-                  <dd className="mt-1 text-[15px] text-navy-800">{DEMO_USER.phone}</dd>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-white p-5">
-                <PinIcon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
-                <div>
-                  <dt className="type-mono text-ink-30">Default address</dt>
-                  <dd className="mt-1 text-[15px] text-ink-30">{DEMO_USER.address}</dd>
-                </div>
-              </div>
+              <Detail Icon={UserIcon} label="Name" value={displayName} />
+              <Detail Icon={MailIcon} label="Email" value={profile.email ?? "—"} />
+              <Detail Icon={PhoneIcon} label="Phone" value={profile.phone ?? "—"} />
+              <Detail
+                Icon={PinIcon}
+                label="Default address"
+                value={
+                  address
+                    ? [address.line1, address.line2, address.city, address.state, address.postal_code]
+                        .filter(Boolean)
+                        .join(", ")
+                    : "Add a default delivery address"
+                }
+                muted={!address}
+              />
             </dl>
           </section>
         </div>
       </div>
     </section>
+  );
+}
+
+function Detail({
+  Icon,
+  label,
+  value,
+  muted,
+}: {
+  Icon: (p: { className?: string; "aria-hidden"?: boolean }) => React.ReactElement;
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 bg-white p-5">
+      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-navy-500" aria-hidden />
+      <div>
+        <dt className="type-mono text-ink-30">{label}</dt>
+        <dd className={`mt-1 text-[15px] ${muted ? "text-ink-30" : "text-navy-800"}`}>{value}</dd>
+      </div>
+    </div>
   );
 }
