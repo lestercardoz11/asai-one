@@ -21,7 +21,7 @@ export function AddressEditor({ initial, hasAddress }: { initial: AddressInput; 
   const [editing, setEditing] = useState(false);
 
   if (!editing) {
-    const summary = [saved.line1, saved.line2, saved.city, saved.state, saved.pin]
+    const summary = [saved.fullName, saved.line1, saved.line2, saved.city, saved.state, saved.pin]
       .filter(Boolean)
       .join(", ");
     return (
