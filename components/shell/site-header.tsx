@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart/cart-context";
+import { createClient } from "@/lib/supabase/client";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { Logo } from "@/components/shell/logo";
 import {
   CartIcon,
@@ -26,7 +28,27 @@ export function SiteHeader() {
   const { itemCount, ready } = useCart();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authed, setAuthed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const closeDrawer = () => setOpen(false);
+
+  // Auth state resolved client-side so the layout stays statically rendered.
+  useEffect(() => {
+    const supabase = createClient();
+    const roleOf = (u: { app_metadata?: Record<string, unknown> } | null | undefined) =>
+      (u?.app_metadata?.role as string | undefined) === "admin";
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthed(!!data.user);
+      setIsAdmin(roleOf(data.user));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session?.user);
+      setIsAdmin(roleOf(session?.user));
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Lock scroll while the drawer is open.
   useEffect(() => {
@@ -43,8 +65,43 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close the user dropdown on outside click or Escape.
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!userMenuRef.current?.contains(e.target as Node)) setUserMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setUserMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [userMenuOpen]);
+
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // The admin area has its own sidebar chrome — render a slim header instead of
+  // the full storefront nav/cart so the two contexts feel distinct.
+  if (pathname.startsWith("/admin")) {
+    return (
+      <header className="sticky top-0 z-50 border-b border-ink-12 bg-white/95 backdrop-blur">
+        <div className="container-page flex h-14 items-center justify-between">
+          <Logo />
+          <Link
+            href="/"
+            className="type-mono text-[11px] text-navy-500 transition-colors hover:text-navy-800"
+          >
+            ← Back to store
+          </Link>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -55,12 +112,20 @@ export function SiteHeader() {
             Free shipping over ₹499 · Ships from Pune
           </p>
           <div className="hidden items-center gap-5 sm:flex">
-            <Link href="/account" className="type-mono text-[10px] transition-colors hover:text-white">
-              Track Order
-            </Link>
-            <Link href="/login" className="type-mono text-[10px] transition-colors hover:text-white">
-              Login / Register
-            </Link>
+            {authed ? (
+              <Link href="/account" className="type-mono text-[10px] transition-colors hover:text-white">
+                Track Order
+              </Link>
+            ) : (
+              <>
+                <Link href="/account" className="type-mono text-[10px] transition-colors hover:text-white">
+                  Track Order
+                </Link>
+                <Link href="/login" className="type-mono text-[10px] transition-colors hover:text-white">
+                  Login / Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -115,13 +180,54 @@ export function SiteHeader() {
             >
               <SearchIcon className="h-5 w-5" />
             </Link>
-            <Link
-              href="/login"
-              aria-label="Account"
-              className="hidden h-10 w-10 place-items-center text-navy-800 transition-colors hover:bg-navy-50 sm:grid"
-            >
-              <UserIcon className="h-5 w-5" />
-            </Link>
+            {authed ? (
+              <div ref={userMenuRef} className="relative hidden sm:block">
+                <button
+                  type="button"
+                  aria-label="Account menu"
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="grid h-10 w-10 place-items-center text-navy-800 transition-colors hover:bg-navy-50"
+                >
+                  <UserIcon className="h-5 w-5" />
+                </button>
+                {userMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-50 mt-1 w-44 border border-ink-12 bg-white py-1 shadow-[0_8px_24px_-8px_rgba(10,10,10,0.18)]"
+                  >
+                    <Link
+                      href="/account"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 type-condensed text-xs text-navy-800 transition-colors hover:bg-navy-50"
+                    >
+                      My Account
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        role="menuitem"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2.5 type-condensed text-xs text-navy-800 transition-colors hover:bg-navy-50"
+                      >
+                        Admin
+                      </Link>
+                    )}
+                    <LogoutButton className="block w-full px-4 py-2.5 text-left type-condensed text-xs text-navy-800 transition-colors hover:bg-navy-50" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                aria-label="Log in"
+                className="hidden h-10 w-10 place-items-center text-navy-800 transition-colors hover:bg-navy-50 sm:grid"
+              >
+                <UserIcon className="h-5 w-5" />
+              </Link>
+            )}
             <Link
               href="/cart"
               aria-label={`Cart, ${ready ? itemCount : 0} items`}
@@ -190,12 +296,23 @@ export function SiteHeader() {
             ))}
           </nav>
           <div className="mt-auto grid grid-cols-2 gap-px bg-ink-12">
-            <Link href="/login" onClick={closeDrawer} className="bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800">
-              Login
-            </Link>
-            <Link href="/register" onClick={closeDrawer} className="bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800">
-              Register
-            </Link>
+            {authed ? (
+              <>
+                <Link href="/account" onClick={closeDrawer} className="bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800">
+                  Account
+                </Link>
+                <LogoutButton className="w-full bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800" />
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={closeDrawer} className="bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800">
+                  Login
+                </Link>
+                <Link href="/register" onClick={closeDrawer} className="bg-white px-3 py-4 text-center type-condensed text-xs text-navy-800">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

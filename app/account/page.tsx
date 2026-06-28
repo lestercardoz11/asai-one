@@ -8,9 +8,11 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { getProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/format";
-import { UserIcon, TruckIcon, ArrowRightIcon } from "@/components/icons";
+import { UserIcon, TruckIcon, ArrowRightIcon, HeartIcon } from "@/components/icons";
 import { AccountDetails, type AccountDetailsData } from "@/components/account/account-details";
 import { AddressEditor } from "@/components/account/address-editor";
+import { CancelOrderButton } from "@/components/account/cancel-order-button";
+import { DeleteAccount } from "@/components/account/delete-account";
 import type { AddressInput } from "@/lib/account/actions";
 
 export const metadata: Metadata = {
@@ -83,9 +85,18 @@ export default async function AccountPage() {
               </h1>
             </div>
           </div>
-          <LogoutButton
-            className={buttonVariants({ variant: "secondary", size: "md" })}
-          />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/wishlist"
+              className={buttonVariants({ variant: "secondary", size: "md" })}
+            >
+              <HeartIcon className="h-4 w-4" aria-hidden />
+              Saved items
+            </Link>
+            <LogoutButton
+              className={buttonVariants({ variant: "secondary", size: "md" })}
+            />
+          </div>
         </header>
 
         <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-[1.2fr_1fr]">
@@ -108,9 +119,14 @@ export default async function AccountPage() {
                         {o.status}
                       </p>
                     </div>
-                    <p className="font-condensed text-base font-semibold tabular-nums text-navy-800">
-                      {formatINR(o.total_paise)}
-                    </p>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <p className="font-condensed text-base font-semibold tabular-nums text-navy-800">
+                        {formatINR(o.total_paise)}
+                      </p>
+                      {(o.status === "pending" || o.status === "confirmed") && (
+                        <CancelOrderButton orderId={o.id} orderNumber={o.order_number} />
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -142,6 +158,7 @@ export default async function AccountPage() {
 
             <AccountDetails initial={detailsData} />
             <AddressEditor initial={addressForm} hasAddress={!!address} />
+            <DeleteAccount hasEmail={!!profile.email} />
           </section>
         </div>
       </div>

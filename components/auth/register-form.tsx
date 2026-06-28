@@ -2,56 +2,77 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LabeledInput } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { AuthToggle, type AuthMethod } from "@/components/auth/auth-toggle";
+import { signUpWithPassword } from "@/lib/auth/actions";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^[0-9]{10}$/;
 
 export function RegisterForm() {
-  const [method, setMethod] = useState<AuthMethod>("email");
+  const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
 
-  function switchMethod(next: AuthMethod) {
-    setMethod(next);
-    setErrors((p) => ({ ...p, email: "", phone: "" }));
-  }
-
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const next: Record<string, string> = {};
-
     if (!name.trim()) next.name = "Please enter your name";
-
-    if (method === "email") {
-      if (!email.trim()) next.email = "Please enter your email";
-      else if (!EMAIL_RE.test(email.trim())) next.email = "Enter a valid email";
-    } else {
-      if (!phone.trim()) next.phone = "Please enter your phone number";
-      else if (!PHONE_RE.test(phone.trim())) next.phone = "Enter a 10-digit number";
-    }
-
+    if (!email.trim()) next.email = "Please enter your email";
+    else if (!EMAIL_RE.test(email.trim())) next.email = "Enter a valid email";
     if (!password) next.password = "Please create a password";
     else if (password.length < 8) next.password = "Use at least 8 characters";
 
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    toast({
-      title: "Account created",
-      description: "Welcome to ASAI.One — you're all set.",
-      variant: "success",
+    setPending(true);
+    const result = await signUpWithPassword({
+      name,
+      email,
+      password,
+      marketingOptIn,
+      whatsappOptIn,
     });
+    setPending(false);
+    if (result.ok) {
+      if (result.needsConfirmation) {
+        // No session yet — show a "check your inbox" state instead of bouncing to /account.
+        setConfirmEmail(email.trim());
+        return;
+      }
+      toast({ title: "Account created", description: result.message, variant: "success" });
+      router.push("/account");
+      router.refresh();
+    } else {
+      toast({ title: "Couldn't sign up", description: result.message, variant: "error" });
+    }
+  }
+
+  if (confirmEmail) {
+    return (
+      <div className="border border-ink-12 bg-white p-6 text-center sm:p-8">
+        <h2 className="type-condensed text-lg text-navy-800">Confirm your email</h2>
+        <p className="mt-3 text-sm text-ink-60">
+          We sent a confirmation link to <span className="text-navy-800">{confirmEmail}</span>. Open it
+          to activate your account, then log in.
+        </p>
+        <Link
+          href="/login"
+          className="mt-6 inline-block type-condensed text-xs text-navy-500 hover:text-navy-800"
+        >
+          Go to login →
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -69,38 +90,19 @@ export function RegisterForm() {
           }}
         />
 
-        <AuthToggle value={method} onChange={switchMethod} idBase="register" />
-
-        {method === "email" ? (
-          <LabeledInput
-            label="Email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            required
-            value={email}
-            error={errors.email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setErrors((p) => ({ ...p, email: "" }));
-            }}
-          />
-        ) : (
-          <LabeledInput
-            label="Phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            required
-            placeholder="10-digit mobile number"
-            value={phone}
-            error={errors.phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-              setErrors((p) => ({ ...p, phone: "" }));
-            }}
-          />
-        )}
+        <LabeledInput
+          label="Email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          value={email}
+          error={errors.email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setErrors((p) => ({ ...p, email: "" }));
+          }}
+        />
 
         <LabeledInput
           label="Password"
@@ -140,8 +142,8 @@ export function RegisterForm() {
           </label>
         </fieldset>
 
-        <Button type="submit" size="lg" full>
-          Create account
+        <Button type="submit" size="lg" full disabled={pending}>
+          {pending ? "Creating…" : "Create account"}
         </Button>
       </form>
 

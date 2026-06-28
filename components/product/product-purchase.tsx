@@ -1,14 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Product, VariantAttributes } from "@/lib/types";
-import {
-  axisOptions,
-  resolveVariant,
-  isOptionAvailable,
-  defaultSelection,
-  formatAxisValue,
-} from "@/lib/variants";
+import type { Product, VariantSelection } from "@/lib/types";
+import { resolveVariant, isValueAvailable, defaultSelection } from "@/lib/variants";
 import { useCart } from "@/lib/cart/cart-context";
 import { toast } from "@/components/ui/toast";
 import { formatINR, discountPct } from "@/lib/format";
@@ -20,7 +14,7 @@ import { CheckIcon } from "@/components/icons";
 
 export function ProductPurchase({ product }: { product: Product }) {
   const { addItem } = useCart();
-  const [selection, setSelection] = useState<VariantAttributes>(() =>
+  const [selection, setSelection] = useState<VariantSelection>(() =>
     defaultSelection(product),
   );
   const [qty, setQty] = useState(1);
@@ -34,12 +28,26 @@ export function ProductPurchase({ product }: { product: Product }) {
   const inStock = variant.stock > 0;
   const lowStock = inStock && variant.stock <= 10;
 
-  const choose = (key: keyof VariantAttributes, value: NonNullable<VariantAttributes[keyof VariantAttributes]>) =>
-    setSelection((prev) => ({ ...prev, [key]: value }));
+  const choose = (optionId: string, valueId: string) =>
+    setSelection((prev) => ({ ...prev, [optionId]: valueId }));
 
   const add = () => {
     if (!inStock) return;
-    addItem(variant.id, product.id, qty);
+    addItem(
+      {
+        variantId: variant.id,
+        productId: product.id,
+        slug: product.slug,
+        title: product.title,
+        image: product.images[0],
+        variantLabel: variant.label,
+        sku: variant.sku,
+        hasChoices: product.variants.length > 1,
+        unitPrice: variant.price,
+        compareAtPrice: variant.compareAtPrice,
+      },
+      qty,
+    );
     toast({
       title: "Added to cart",
       description:
@@ -65,26 +73,25 @@ export function ProductPurchase({ product }: { product: Product }) {
         {off && <Badge tone="sale">Save {off}%</Badge>}
       </div>
 
-      {/* variant axes */}
-      {product.variantAxes.map((axis) => {
-        const options = axisOptions(product, axis.key);
+      {/* variant options */}
+      {product.options.map((option) => {
+        const selectedValueId = selection[option.id];
+        const selectedValue = option.values.find((v) => v.id === selectedValueId);
         return (
-          <fieldset key={axis.key} className="flex flex-col gap-2.5">
+          <fieldset key={option.id} className="flex flex-col gap-2.5">
             <legend className="type-mono text-ink-60">
-              {axis.label}:{" "}
-              <span className="text-navy-800">
-                {formatAxisValue(axis.key, selection[axis.key] as NonNullable<VariantAttributes[typeof axis.key]>)}
-              </span>
+              {option.name}:{" "}
+              <span className="text-navy-800">{selectedValue?.value}</span>
             </legend>
             <div className="flex flex-wrap gap-2">
-              {options.map((value) => {
-                const selected = selection[axis.key] === value;
-                const available = isOptionAvailable(product, axis.key, value, selection);
+              {option.values.map((value) => {
+                const selected = selectedValueId === value.id;
+                const available = isValueAvailable(product, option, value.id, selection);
                 return (
                   <button
-                    key={String(value)}
+                    key={value.id}
                     type="button"
-                    onClick={() => choose(axis.key, value)}
+                    onClick={() => choose(option.id, value.id)}
                     aria-pressed={selected}
                     disabled={!available && !selected}
                     className={cn(
@@ -97,7 +104,7 @@ export function ProductPurchase({ product }: { product: Product }) {
                         "cursor-not-allowed border-ink-12 text-ink-30 line-through hover:border-ink-12",
                     )}
                   >
-                    {formatAxisValue(axis.key, value)}
+                    {value.value}
                   </button>
                 );
               })}

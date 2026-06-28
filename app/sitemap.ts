@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getModes, getProducts } from "@/lib/data";
 
-const BASE = "https://asai.one";
+const BASE = (process.env.NEXT_PUBLIC_SITE_URL || "https://asai.one").replace(/\/+$/, "");
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [modes, products] = await Promise.all([getModes(), getProducts()]);

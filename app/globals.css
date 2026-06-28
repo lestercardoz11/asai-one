@@ -109,6 +109,16 @@
     color: var(--color-white);
   }
 
+  /* Interactive controls show a pointer cursor — native <button> defaults to the
+     arrow cursor. Disabled buttons keep the default (non-interactive) cursor. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]),
+  summary {
+    cursor: pointer;
+  }
+
   /* Honour reduced-motion: kill all transitions/animations. */
   @media (prefers-reduced-motion: reduce) {
     *,

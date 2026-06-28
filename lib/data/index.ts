@@ -1,140 +1,165 @@
-import type {
-  CommuteMode,
-  Coupon,
-  Product,
-  ProductVariant,
-} from "@/lib/types";
-import { MODES } from "./modes";
-import { PRODUCTS } from "./products";
-import { COUPONS } from "./coupons";
+import type { CommuteMode, Coupon, Product, ProductVariant } from "@/lib/types";
+import { publicClient } from "@/lib/supabase/public";
+import {
+  MODE_SELECT,
+  PRODUCT_SELECT,
+  mapCoupon,
+  mapMode,
+  mapProduct,
+} from "./map";
 
 /**
- * Backend-agnostic data adapter.
+ * Backend data adapter (Phase 3 — Supabase).
  *
  * Every component reads the catalogue through these functions — never from the
- * mock arrays directly. In Phase 3 the bodies are reimplemented against Supabase
- * with the SAME signatures, so swapping the data source touches this file only.
+ * database directly. The signatures are unchanged from the Phase 2 mock adapter,
+ * so swapping the data source touched only this file + the row→domain mappers.
  *
- * Functions are async on purpose: it mirrors the real (network) data layer and
- * keeps call sites unchanged across the Phase 3 swap. The data is static, so
- * pages still prerender to static shells — navigations stay instant without
- * Cache Components (see docs/PHASE-0-2-DELIVERY.md).
+ * Reads use the cookieless public (anon) client; row visibility is governed by
+ * RLS (active, non-deleted products / live categories / valid coupons).
  */
 
-function clone<T>(value: T): T {
-  return structuredClone(value);
-}
-
-const liveModeIds = new Set(
-  MODES.filter((m) => m.status === "live").map((m) => m.id),
-);
-
-function isShoppable(p: Product): boolean {
-  return p.published && liveModeIds.has(p.modeId);
-}
-
-/* ── Modes ─────────────────────────────────────────────────────────────────── */
+/* ── Modes (categories) ──────────────────────────────────────────────────── */
 
 export async function getModes(): Promise<CommuteMode[]> {
-  return clone(MODES);
+  const { data, error } = await publicClient()
+    .from("categories")
+    .select(MODE_SELECT)
+    .is("deleted_at", null)
+    .order("sort_order");
+  if (error) throw error;
+  return (data ?? []).map(mapMode);
 }
 
 export async function getMode(slug: string): Promise<CommuteMode | undefined> {
-  return clone(MODES.find((m) => m.slug === slug));
+  const { data, error } = await publicClient()
+    .from("categories")
+    .select(MODE_SELECT)
+    .eq("slug", slug)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapMode(data) : undefined;
 }
 
-/* ── Products ──────────────────────────────────────────────────────────────── */
+async function liveCategoryIds(): Promise<string[]> {
+  const { data, error } = await publicClient()
+    .from("categories")
+    .select("id, status")
+    .eq("status", "active")
+    .is("deleted_at", null);
+  if (error) throw error;
+  return (data ?? []).map((c) => c.id);
+}
 
-/** All shoppable products (published + belonging to a live mode). */
+/* ── Products ────────────────────────────────────────────────────────────── */
+
+/** All shoppable products (active + belonging to a live mode). */
 export async function getProducts(): Promise<Product[]> {
-  return clone(PRODUCTS.filter(isShoppable));
+  const liveIds = await liveCategoryIds();
+  if (liveIds.length === 0) return [];
+  const { data, error } = await publicClient()
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .in("category_id", liveIds)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map(mapProduct);
 }
 
 export async function getProduct(slug: string): Promise<Product | undefined> {
-  const p = PRODUCTS.find((x) => x.slug === slug && isShoppable(x));
-  return clone(p);
+  const { data, error } = await publicClient()
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+  const liveIds = await liveCategoryIds();
+  if (!liveIds.includes(data.category_id)) return undefined;
+  return mapProduct(data);
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  return clone(PRODUCTS.find((x) => x.id === id && isShoppable(x)));
+  const { data, error } = await publicClient()
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+  const liveIds = await liveCategoryIds();
+  if (!liveIds.includes(data.category_id)) return undefined;
+  return mapProduct(data);
 }
 
 export async function getProductsByMode(modeSlug: string): Promise<Product[]> {
-  const mode = MODES.find((m) => m.slug === modeSlug);
+  const mode = await getMode(modeSlug);
   if (!mode || mode.status !== "live") return [];
-  return clone(PRODUCTS.filter((p) => p.modeId === mode.id && isShoppable(p)));
+  const { data, error } = await publicClient()
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("category_id", mode.id)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map(mapProduct);
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
   // Best sellers first, then new arrivals — the home carousel order.
-  const live = PRODUCTS.filter(isShoppable);
+  const products = await getProducts();
   const score = (p: Product) => (p.isBestSeller ? 2 : 0) + (p.isNew ? 1 : 0);
-  return clone([...live].sort((a, b) => score(b) - score(a)));
+  return [...products].sort((a, b) => score(b) - score(a));
 }
 
 export async function getBestSellers(): Promise<Product[]> {
-  return clone(PRODUCTS.filter((p) => isShoppable(p) && p.isBestSeller));
+  return (await getProducts()).filter((p) => p.isBestSeller);
 }
 
 export async function getNewArrivals(): Promise<Product[]> {
-  return clone(PRODUCTS.filter((p) => isShoppable(p) && p.isNew));
+  return (await getProducts()).filter((p) => p.isNew);
 }
 
 export async function searchProducts(query: string): Promise<Product[]> {
   const q = query.trim().toLowerCase();
-  if (!q) return getProducts();
-  return clone(
-    PRODUCTS.filter(
-      (p) =>
-        isShoppable(p) &&
-        (p.title.toLowerCase().includes(q) ||
-          p.shortDescription.toLowerCase().includes(q) ||
-          p.features.some((f) => f.toLowerCase().includes(q))),
-    ),
+  const products = await getProducts();
+  if (!q) return products;
+  return products.filter(
+    (p) =>
+      p.title.toLowerCase().includes(q) ||
+      p.shortDescription.toLowerCase().includes(q) ||
+      p.features.some((f) => f.toLowerCase().includes(q)),
   );
 }
 
-/* ── Variants ──────────────────────────────────────────────────────────────── */
+/* ── Variants ────────────────────────────────────────────────────────────── */
 
 export async function getVariant(
   variantId: string,
 ): Promise<{ product: Product; variant: ProductVariant } | undefined> {
-  for (const p of PRODUCTS) {
-    const variant = p.variants.find((v) => v.id === variantId);
-    if (variant) return clone({ product: p, variant });
-  }
-  return undefined;
+  const { data, error } = await publicClient()
+    .from("product_variants")
+    .select("product_id")
+    .eq("id", variantId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+  const product = await getProductById(data.product_id);
+  if (!product) return undefined;
+  const variant = product.variants.find((v) => v.id === variantId);
+  return variant ? { product, variant } : undefined;
 }
 
-/* ── Coupons ───────────────────────────────────────────────────────────────── */
+/* ── Coupons ─────────────────────────────────────────────────────────────── */
 
 export async function getCoupon(code: string): Promise<Coupon | undefined> {
-  return clone(
-    COUPONS.find((c) => c.code.toLowerCase() === code.trim().toLowerCase()),
-  );
+  const trimmed = code.trim();
+  if (!trimmed) return undefined;
+  // Lookup via a SECURITY DEFINER RPC: anon can no longer `select * from coupons`
+  // to enumerate every active code. The RPC enforces active/window/usage-limit
+  // and returns at most the single matching, currently-usable coupon.
+  const { data, error } = await publicClient().rpc("lookup_coupon", { p_code: trimmed });
+  if (error) throw error;
+  const row = data?.[0];
+  return row ? mapCoupon(row) : undefined;
 }
-
-/** Synchronous coupon lookup for the client cart (catalogue is bundled). */
-export function findCouponSync(code: string): Coupon | undefined {
-  const c = COUPONS.find(
-    (x) => x.code.toLowerCase() === code.trim().toLowerCase(),
-  );
-  return c ? { ...c } : undefined;
-}
-
-/**
- * Synchronous variant resolver for the client-side cart. Safe in Phase 2
- * because the mock catalogue is bundled; in Phase 3 the cart hydrates line
- * items from server data instead.
- */
-export function resolveVariantSync(
-  variantId: string,
-): { product: Product; variant: ProductVariant } | undefined {
-  for (const p of PRODUCTS) {
-    const variant = p.variants.find((v) => v.id === variantId);
-    if (variant) return { product: p, variant };
-  }
-  return undefined;
-}
-
-export { COUPONS };

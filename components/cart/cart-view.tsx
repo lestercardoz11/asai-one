@@ -47,7 +47,7 @@ export function CartView() {
         </div>
         <div className="divide-y divide-ink-12">
           {lines.map((line) => (
-            <CartLine key={line.variant.id} line={line} />
+            <CartLine key={line.variantId} line={line} />
           ))}
         </div>
       </div>

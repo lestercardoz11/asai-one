@@ -1,10 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, Barlow_Condensed, Barlow, DM_Mono } from "next/font/google";
+import { Bebas_Neue, Barlow_Condensed, Barlow, DM_Mono, Oswald } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart/cart-context";
 import { SiteHeader } from "@/components/shell/site-header";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { ToastViewport } from "@/components/ui/toast";
+import { JsonLd } from "@/components/seo/json-ld";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://asai.one";
+
+const ORG_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "ASAI.One",
+  url: SITE_URL,
+  description: "Mode-based commuter essentials, starting with 2-Wheeler.",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Pune",
+    addressRegion: "Maharashtra",
+    addressCountry: "IN",
+  },
+  email: "support@asai.one",
+};
 
 const bebas = Bebas_Neue({
   weight: "400",
@@ -34,8 +52,17 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
+// Logo wordmark — a tall, condensed Bebas-like face that DOES include lowercase,
+// so the mark reads "ASAI.One" (not all-caps).
+const oswald = Oswald({
+  weight: ["500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-oswald",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://asai.one"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "ASAI.One — Mode-based commuter essentials",
     template: "%s · ASAI.One",
@@ -55,8 +82,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     siteName: "ASAI.One",
+    images: ["/images/hero.webp"],
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: ["/images/hero.webp"] },
   // Renders <meta name="apple-mobile-web-app-title" content="ASAI.One" />.
   // The favicon, icons, apple-icon and manifest are auto-detected by Next.js
   // from the matching files in the app/ directory.
@@ -77,9 +105,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bebas.variable} ${barlowCondensed.variable} ${barlow.variable} ${dmMono.variable} h-full`}
+      className={`${bebas.variable} ${barlowCondensed.variable} ${barlow.variable} ${dmMono.variable} ${oswald.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-near-white text-ink">
+        <JsonLd data={ORG_LD} />
         <CartProvider>
           <a
             href="#main"

@@ -12,6 +12,8 @@ export function Rating({
   showCount?: boolean;
   className?: string;
 }) {
+  // No real reviews yet → render nothing (don't show empty/zero stars).
+  if (!summary.count) return null;
   const pct = Math.max(0, Math.min(100, (summary.rating / 5) * 100));
   return (
     <div className={cn("flex items-center gap-2", className)}>

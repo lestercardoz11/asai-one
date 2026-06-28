@@ -10,6 +10,7 @@ export function CouponField() {
   const { coupon, applyCoupon, removeCoupon } = useCart();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   if (coupon) {
     return (
@@ -31,9 +32,11 @@ export function CouponField() {
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        const result = applyCoupon(code);
+        setPending(true);
+        const result = await applyCoupon(code);
+        setPending(false);
         setError(result.ok ? null : result.message);
         if (result.ok) setCode("");
       }}
@@ -50,8 +53,8 @@ export function CouponField() {
           aria-invalid={error ? true : undefined}
           className="uppercase"
         />
-        <Button type="submit" variant="secondary" disabled={!code.trim()}>
-          Apply
+        <Button type="submit" variant="secondary" disabled={!code.trim() || pending}>
+          {pending ? "…" : "Apply"}
         </Button>
       </div>
       {error && <p className="mt-1.5 type-mono text-[10px] text-error">{error}</p>}

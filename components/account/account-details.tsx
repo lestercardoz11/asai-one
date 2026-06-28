@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LabeledInput } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
-import { UserIcon, MailIcon, PhoneIcon } from "@/components/icons";
+import { UserIcon, MailIcon, PhoneIcon, LockIcon } from "@/components/icons";
 import {
   updateProfile,
   requestEmailChange,
-  requestPhoneChange,
-  confirmPhoneChange,
+  updatePhone,
+  changePassword,
 } from "@/lib/account/actions";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -23,7 +23,7 @@ export interface AccountDetailsData {
   whatsappOptIn: boolean;
 }
 
-type Section = "profile" | "email" | "phone" | null;
+type Section = "profile" | "email" | "phone" | "password" | null;
 
 const checkboxClass =
   "mt-0.5 h-4 w-4 shrink-0 appearance-none border border-ink-12 bg-white " +
@@ -61,6 +61,7 @@ export function AccountDetails({ initial }: { initial: AccountDetailsData }) {
 
       {section === "phone" ? (
         <PhoneEditor
+          current={data.phone}
           onCancel={() => setSection(null)}
           onSaved={(phone) => {
             setData((d) => ({ ...d, phone }));
@@ -70,7 +71,98 @@ export function AccountDetails({ initial }: { initial: AccountDetailsData }) {
       ) : (
         <Row Icon={PhoneIcon} label="Phone" value={data.phone || "—"} onEdit={() => setSection("phone")} />
       )}
+
+      {section === "password" ? (
+        <PasswordEditor onCancel={() => setSection(null)} onSaved={() => setSection(null)} />
+      ) : (
+        <Row Icon={LockIcon} label="Password" value="••••••••" onEdit={() => setSection("password")} />
+      )}
     </dl>
+  );
+}
+
+function PasswordEditor({
+  onCancel,
+  onSaved,
+}: {
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!current) errs.current = "Enter your current password";
+    if (next.length < 8) errs.next = "Use at least 8 characters";
+    if (confirm !== next) errs.confirm = "Passwords don't match";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setPending(true);
+    const result = await changePassword({ currentPassword: current, newPassword: next });
+    setPending(false);
+    if (result.ok) {
+      toast({ title: "Password updated", description: result.message, variant: "success" });
+      onSaved();
+    } else {
+      setErrors({ current: result.message });
+      toast({ title: "Couldn't update", description: result.message, variant: "error" });
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 bg-white p-5">
+      <LabeledInput
+        label="Current password"
+        type="password"
+        autoComplete="current-password"
+        required
+        value={current}
+        error={errors.current}
+        onChange={(e) => {
+          setCurrent(e.target.value);
+          setErrors((p) => ({ ...p, current: "" }));
+        }}
+      />
+      <LabeledInput
+        label="New password"
+        type="password"
+        autoComplete="new-password"
+        required
+        hint="At least 8 characters."
+        value={next}
+        error={errors.next}
+        onChange={(e) => {
+          setNext(e.target.value);
+          setErrors((p) => ({ ...p, next: "" }));
+        }}
+      />
+      <LabeledInput
+        label="Confirm new password"
+        type="password"
+        autoComplete="new-password"
+        required
+        value={confirm}
+        error={errors.confirm}
+        onChange={(e) => {
+          setConfirm(e.target.value);
+          setErrors((p) => ({ ...p, confirm: "" }));
+        }}
+      />
+      <div className="flex gap-3">
+        <Button type="submit" size="md" disabled={pending}>
+          {pending ? "Saving…" : "Update password"}
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={onCancel} disabled={pending}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -250,111 +342,47 @@ function EmailEditor({
 }
 
 function PhoneEditor({
+  current,
   onCancel,
   onSaved,
 }: {
+  current: string;
   onCancel: () => void;
   onSaved: (phone: string) => void;
 }) {
-  const [phone, setPhone] = useState("");
-  const [e164, setE164] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [step, setStep] = useState<"input" | "otp">("input");
+  const [phone, setPhone] = useState(current);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
-  async function sendOtp(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!PHONE_RE.test(phone.trim())) {
+    const v = phone.trim();
+    // Accept a 10-digit number or a +E.164 number; empty clears it.
+    if (v && !PHONE_RE.test(v) && !/^\+\d{10,15}$/.test(v)) {
       setError("Enter a 10-digit number");
       return;
     }
     setPending(true);
-    const result = await requestPhoneChange(phone);
+    const result = await updatePhone(phone);
     setPending(false);
     if (result.ok) {
-      setE164(result.phone ?? phone);
-      setOtp(["", "", "", "", "", ""]);
-      setStep("otp");
-      toast({ title: "OTP sent", description: result.message, variant: "success" });
+      toast({ title: "Saved", description: result.message, variant: "success" });
+      onSaved(result.phone ?? "");
     } else {
       setError(result.message);
-      toast({ title: "Couldn't send code", description: result.message, variant: "error" });
+      toast({ title: "Couldn't save", description: result.message, variant: "error" });
     }
-  }
-
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    if (otp.some((d) => d === "")) {
-      setError("Enter all 6 digits");
-      return;
-    }
-    setPending(true);
-    const result = await confirmPhoneChange(e164, otp.join(""));
-    setPending(false);
-    if (result.ok) {
-      toast({ title: "Phone updated", description: result.message, variant: "success" });
-      onSaved(e164);
-    } else {
-      setError(result.message);
-      toast({ title: "Verification failed", description: result.message, variant: "error" });
-    }
-  }
-
-  function updateOtp(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((prev) => {
-      const copy = [...prev];
-      copy[index] = digit;
-      return copy;
-    });
-    setError("");
-    if (digit) document.getElementById(`acc-otp-${index + 1}`)?.focus();
-  }
-
-  if (step === "otp") {
-    return (
-      <form onSubmit={verify} noValidate className="flex flex-col gap-4 bg-white p-5">
-        <div className="flex flex-col gap-1.5">
-          <span className="type-mono text-ink-60">Enter OTP</span>
-          <div className="flex gap-2">
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                id={`acc-otp-${i}`}
-                inputMode="numeric"
-                maxLength={1}
-                aria-label={`OTP digit ${i + 1}`}
-                value={digit}
-                onChange={(e) => updateOtp(i, e.target.value)}
-                className="h-12 w-full border bg-white text-center text-lg text-ink transition-colors focus:border-navy-500 focus:outline-none"
-              />
-            ))}
-          </div>
-          {error && <p className="type-mono text-[10px] text-error">{error}</p>}
-          <p className="text-xs text-ink-30">We sent a 6-digit code to {e164}.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button type="submit" size="md" disabled={pending}>
-            {pending ? "Verifying…" : "Verify & save"}
-          </Button>
-          <Button type="button" variant="secondary" size="md" onClick={onCancel} disabled={pending}>
-            Cancel
-          </Button>
-        </div>
-      </form>
-    );
   }
 
   return (
-    <form onSubmit={sendOtp} noValidate className="flex flex-col gap-4 bg-white p-5">
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 bg-white p-5">
       <LabeledInput
-        label="New phone"
+        label="Phone"
         type="tel"
         inputMode="tel"
         autoComplete="tel"
-        required
         placeholder="10-digit mobile number"
+        hint="Used for delivery updates. Leave blank to remove."
         value={phone}
         error={error}
         onChange={(e) => {
@@ -364,7 +392,7 @@ function PhoneEditor({
       />
       <div className="flex gap-3">
         <Button type="submit" size="md" disabled={pending}>
-          {pending ? "Sending…" : "Send OTP"}
+          {pending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" size="md" onClick={onCancel} disabled={pending}>
           Cancel

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth/user";
 import { clientIp, withinRateLimit } from "@/lib/security/rate-limit";
 
@@ -51,6 +52,42 @@ export async function updateProfile(input: {
 
   revalidatePath("/account");
   return { ok: true, message: "Your details have been updated." };
+}
+
+/**
+ * Save the phone number as a plain profile field (no SMS / OTP verification).
+ * Phone-based auth and OTP are deferred until the messaging layer is configured;
+ * until then a number is just stored for order contact. Pass an empty string to
+ * clear it.
+ */
+export async function updatePhone(
+  phone: string,
+): Promise<AccountResult & { phone?: string }> {
+  const trimmed = phone.trim();
+  let normalized: string | null = null;
+  if (trimmed) {
+    normalized = toE164(trimmed);
+    if (!normalized) return { ok: false, message: "Enter a valid 10-digit number." };
+  }
+
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ phone: normalized })
+    .eq("id", user.id);
+  if (error) {
+    return actionError("update_phone", error, "Could not save your phone number. Please try again.");
+  }
+
+  revalidatePath("/account");
+  return {
+    ok: true,
+    message: normalized ? "Your phone number has been saved." : "Your phone number has been removed.",
+    phone: normalized ?? "",
+  };
 }
 
 export interface AddressInput {
@@ -171,6 +208,109 @@ export async function requestPhoneChange(
     return actionError("phone_change", error, "Phone verification is temporarily unavailable. Please try again later.");
   }
   return { ok: true, message: `OTP sent to ${e164}.`, phone: e164 };
+}
+
+/**
+ * Change the account password while signed in. We re-authenticate with the
+ * current password first (defence against an unattended/hijacked session
+ * silently changing the password), then set the new one. Only meaningful for
+ * accounts that have an email identity — phone-only users have no password.
+ */
+export async function changePassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<AccountResult> {
+  if (input.newPassword.length < 8) return { ok: false, message: "Use at least 8 characters." };
+  if (input.newPassword.length > 72) return { ok: false, message: "That password is too long." };
+  if (input.currentPassword === input.newPassword) {
+    return { ok: false, message: "Choose a password different from your current one." };
+  }
+
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+  const email = user.email;
+  if (!email) {
+    return { ok: false, message: "Add an email to your account before setting a password." };
+  }
+
+  // Throttle current-password guessing on an open session.
+  const ip = await clientIp();
+  if (
+    !(await withinRateLimit({ key: `pwchange:${user.id}`, limit: 5, windowSeconds: 900 })) ||
+    !(await withinRateLimit({ key: `pwchange-ip:${ip}`, limit: 15, windowSeconds: 900 }))
+  ) {
+    return { ok: false, message: "Too many attempts. Please wait a few minutes and try again." };
+  }
+
+  const supabase = await createClient();
+  // Verify the current password by re-authenticating the same user. A wrong
+  // password errors here; a correct one simply refreshes the existing session.
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email,
+    password: input.currentPassword,
+  });
+  if (reauthError) {
+    return actionError("password_reauth", reauthError, "Your current password is incorrect.");
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: input.newPassword });
+  if (error) {
+    return actionError("password_change", error, "Could not update your password. Please try again.");
+  }
+  return { ok: true, message: "Your password has been updated." };
+}
+
+/**
+ * Permanently delete the caller's account. Irreversible. Password-based accounts
+ * must re-authenticate first. The service-role delete cascades the user's profile,
+ * addresses, wishlist, reviews and carts via FK; orders are retained with a null
+ * user_id for financial record-keeping.
+ */
+export async function deleteAccount(input: {
+  confirmation: string;
+  password?: string;
+}): Promise<AccountResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+  if (input.confirmation.trim().toUpperCase() !== "DELETE") {
+    return { ok: false, message: 'Type "DELETE" to confirm.' };
+  }
+
+  const supabase = await createClient();
+
+  // Re-authenticate password accounts before this destructive action.
+  if (user.email) {
+    if (!input.password) return { ok: false, message: "Enter your password to confirm." };
+    const ip = await clientIp();
+    if (
+      !(await withinRateLimit({ key: `delacct:${user.id}`, limit: 5, windowSeconds: 900 })) ||
+      !(await withinRateLimit({ key: `delacct-ip:${ip}`, limit: 15, windowSeconds: 900 }))
+    ) {
+      return { ok: false, message: "Too many attempts. Please wait a few minutes and try again." };
+    }
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: input.password,
+    });
+    if (reauthError) {
+      return actionError("delete_reauth", reauthError, "Your password is incorrect.");
+    }
+  }
+
+  if (!process.env.SUPABASE_SECRET_KEY) {
+    return { ok: false, message: "Account deletion is temporarily unavailable. Please contact support." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) {
+    return actionError("delete_account", error, "Could not delete your account. Please contact support.");
+  }
+
+  // Clear local session cookies; the access token is also rejected server-side
+  // now that the user no longer exists.
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Your account has been deleted." };
 }
 
 /** Confirm a phone change with the OTP, then sync the profiles.phone copy. */

@@ -14,6 +14,9 @@ import {
   CheckIcon,
 } from "@/components/icons";
 
+// ISR — home reflects catalogue/featured changes without a redeploy.
+export const revalidate = 300;
+
 const WHY = [
   {
     Icon: CompassMark,
@@ -103,7 +106,7 @@ export default async function HomePage() {
               {[
                 ["5", "Products live"],
                 ["24h", "Dispatch"],
-                ["4.6★", "Avg. rating"],
+                ["Pune", "Made in India"],
               ].map(([stat, label]) => (
                 <div key={label} className="bg-navy-900 px-4 py-4">
                   <dt className="font-display text-3xl text-white">{stat}</dt>

@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/shell/logo";
-import {
-  InstagramIcon,
-  LinkedInIcon,
-  YouTubeIcon,
-  MailIcon,
-  PinIcon,
-} from "@/components/icons";
+import { InstagramIcon, MailIcon, PinIcon } from "@/components/icons";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -38,9 +32,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
 ];
 
 const SOCIAL = [
-  { label: "Instagram", href: "https://instagram.com", Icon: InstagramIcon },
-  { label: "LinkedIn", href: "https://linkedin.com", Icon: LinkedInIcon },
-  { label: "YouTube", href: "https://youtube.com", Icon: YouTubeIcon },
+  { label: "Instagram", href: "https://instagram.com/asai.one", Icon: InstagramIcon },
 ];
 
 export function SiteFooter() {

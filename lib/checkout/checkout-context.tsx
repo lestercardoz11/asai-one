@@ -22,12 +22,15 @@ export interface ShippingInfo {
 
 interface CheckoutState {
   shipping: ShippingInfo | null;
+  /** Save `shipping` as the buyer's default address (logged-in, own-order only). */
+  saveAddress: boolean;
   paymentMethod: PaymentMethod;
   lastOrder: Order | null;
 }
 
 interface CheckoutContextValue extends CheckoutState {
   setShipping: (info: ShippingInfo) => void;
+  setSaveAddress: (save: boolean) => void;
   setPaymentMethod: (method: PaymentMethod) => void;
   setLastOrder: (order: Order) => void;
   reset: () => void;
@@ -36,6 +39,7 @@ interface CheckoutContextValue extends CheckoutState {
 const STORAGE_KEY = "asai-checkout-v1";
 const initial: CheckoutState = {
   shipping: null,
+  saveAddress: false,
   paymentMethod: "upi",
   lastOrder: null,
 };
@@ -43,6 +47,7 @@ const initial: CheckoutState = {
 type CheckoutAction =
   | { type: "hydrate"; state: CheckoutState }
   | { type: "setShipping"; shipping: ShippingInfo }
+  | { type: "setSaveAddress"; save: boolean }
   | { type: "setPayment"; method: PaymentMethod }
   | { type: "setLastOrder"; order: Order }
   | { type: "reset" };
@@ -53,6 +58,8 @@ function reducer(state: CheckoutState, action: CheckoutAction): CheckoutState {
       return action.state;
     case "setShipping":
       return { ...state, shipping: action.shipping };
+    case "setSaveAddress":
+      return { ...state, saveAddress: action.save };
     case "setPayment":
       return { ...state, paymentMethod: action.method };
     case "setLastOrder":
@@ -90,6 +97,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       setShipping: (shipping) => dispatch({ type: "setShipping", shipping }),
+      setSaveAddress: (save) => dispatch({ type: "setSaveAddress", save }),
       setPaymentMethod: (method) => dispatch({ type: "setPayment", method }),
       setLastOrder: (order) => dispatch({ type: "setLastOrder", order }),
       reset: () => dispatch({ type: "reset" }),
