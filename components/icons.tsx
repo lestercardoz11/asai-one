@@ -301,3 +301,43 @@ export function YouTubeIcon(props: IconProps) {
     </svg>
   );
 }
+
+/* ── Admin nav icons ────────────────────────────────────────────────────────── */
+export function GridIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="0.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="0.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="0.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="0.5" />
+    </svg>
+  );
+}
+
+export function BoxIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3 20.5 7.5v9L12 21 3.5 16.5v-9L12 3Z" />
+      <path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" />
+    </svg>
+  );
+}
+
+export function ReceiptIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 3h14v18l-2.3-1.5L14.4 21 12 19.5 9.6 21 7.3 19.5 5 21V3Z" />
+      <path d="M8.5 8h7M8.5 12h7M8.5 16h4" opacity={0.7} />
+    </svg>
+  );
+}
+
+export function FileTextIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M13 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V9L13 3Z" />
+      <path d="M13 3v6h6" />
+      <path d="M8.5 13h7M8.5 16.5h5" opacity={0.7} />
+    </svg>
+  );
+}
