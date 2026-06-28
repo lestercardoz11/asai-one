@@ -41,15 +41,19 @@ function ConfirmationInner() {
   const [state, dispatch] = useReducer(fetchReducer, { status: "idle", order: null });
 
   const number = params.get("o");
-  const token = params.get("t");
 
   useEffect(() => {
     if (lastOrder || !number) return;
+    // Token rides in the URL fragment so it's never sent to servers / Referer / logs,
+    // while staying shareable and refresh-proof. Read it imperatively (client-only)
+    // to avoid an SSR/hydration mismatch from touching window during render.
+    const hash = window.location.hash; // e.g. "#t=<uuid>"
+    const token = hash.startsWith("#t=") ? decodeURIComponent(hash.slice(3)) : null;
     dispatch({ type: "start" });
     getOrderForConfirmation({ number, token }).then((order) =>
       dispatch({ type: "done", order }),
     );
-  }, [lastOrder, number, token]);
+  }, [lastOrder, number]);
 
   const o = lastOrder ?? (state.status === "done" ? state.order : null);
 

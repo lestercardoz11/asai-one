@@ -86,9 +86,10 @@ export default function PaymentPage() {
   const finish = (order: Order, accessToken?: string) => {
     setLastOrder(order);
     clear();
-    const params = new URLSearchParams({ o: order.id });
-    if (accessToken) params.set("t", accessToken);
-    router.push(`/checkout/confirmation?${params.toString()}`);
+    // Token rides in the URL fragment (never sent to servers / Referer / logs);
+    // `o` stays in the query since the order number is not sensitive.
+    const base = `/checkout/confirmation?o=${encodeURIComponent(order.id)}`;
+    router.push(accessToken ? `${base}#t=${encodeURIComponent(accessToken)}` : base);
   };
 
   const placeOrder = async () => {
