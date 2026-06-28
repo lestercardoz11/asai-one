@@ -11,8 +11,8 @@ import { toast } from "@/components/ui/toast";
 import { Stepper } from "@/components/ui/stepper";
 import { OrderSummary } from "@/components/cart/order-summary";
 import { Button } from "@/components/ui/button";
-import { LockIcon, ShieldIcon } from "@/components/icons";
 import { CHECKOUT_STEPS } from "@/components/checkout/steps";
+import { TrustRow } from "@/components/checkout/trust-row";
 import { PaymentMethods, type PayChoice } from "@/components/checkout/payment-methods";
 
 interface RazorpayResponse {
@@ -207,27 +207,8 @@ export default function PaymentPage() {
           )}
 
           {/* trust */}
-          <div className="mt-8 border border-ink-12 bg-warm-white p-5">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <span className="inline-flex items-center gap-2 type-condensed text-xs text-navy-800">
-                <LockIcon className="h-4 w-4" /> Secure Checkout
-              </span>
-              <span className="inline-flex items-center gap-2 type-condensed text-xs text-navy-800">
-                <ShieldIcon className="h-4 w-4" /> 256-bit Encrypted
-              </span>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["Razorpay", "UPI", "VISA", "Mastercard", "RuPay"].map((logo) => (
-                <span key={logo} className="border border-ink-12 bg-white px-2.5 py-1 type-mono text-[10px] text-ink-60">
-                  {logo}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 type-mono text-[10px] text-ink-30">
-              {process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-                ? "Payments are processed securely by Razorpay."
-                : "Demo checkout — no real payment is processed."}
-            </p>
+          <div className="mt-8">
+            <TrustRow live={!!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID} />
           </div>
 
           <div className="mt-8 flex items-center justify-between">
