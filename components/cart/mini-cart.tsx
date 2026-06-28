@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart/cart-context";
 import { FreeShipBar } from "@/components/cart/free-ship-bar";
@@ -19,6 +19,8 @@ import {
 export function MiniCart() {
   const { lines, itemCount, subtotal, drawerOpen, closeCart, setQty, removeItem } =
     useCart();
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const prevFocus = useRef<HTMLElement | null>(null);
 
   // Lock background scroll + close on Escape while open.
   useEffect(() => {
@@ -32,6 +34,16 @@ export function MiniCart() {
       document.removeEventListener("keydown", onKey);
     };
   }, [drawerOpen, closeCart]);
+
+  // Move focus into the drawer on open; restore it to the trigger on close.
+  useEffect(() => {
+    if (drawerOpen) {
+      prevFocus.current = document.activeElement as HTMLElement | null;
+      closeBtnRef.current?.focus();
+    } else {
+      prevFocus.current?.focus?.();
+    }
+  }, [drawerOpen]);
 
   return (
     <div
@@ -62,6 +74,7 @@ export function MiniCart() {
             Your Cart {itemCount > 0 && `· ${itemCount}`}
           </h2>
           <button
+            ref={closeBtnRef}
             type="button"
             aria-label="Close cart"
             onClick={closeCart}

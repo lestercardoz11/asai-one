@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -126,6 +127,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [ready, setReady] = useReducerReady();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const openCart = useCallback(() => setDrawerOpen(true), []);
+  const closeCart = useCallback(() => setDrawerOpen(false), []);
 
   // Hydrate from localStorage once on mount.
   useEffect(() => {
@@ -212,8 +215,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     },
     removeCoupon: () => dispatch({ type: "removeCoupon" }),
     drawerOpen,
-    openCart: () => setDrawerOpen(true),
-    closeCart: () => setDrawerOpen(false),
+    openCart,
+    closeCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
