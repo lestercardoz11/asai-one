@@ -8,9 +8,16 @@ import { Rating } from "@/components/ui/rating";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { ProductCard } from "@/components/shop/product-card";
+import { WishlistButton } from "@/components/wishlist/wishlist-button";
+import { JsonLd } from "@/components/seo/json-ld";
 import { TruckIcon, ReturnIcon, ShieldIcon } from "@/components/icons";
 
 type Params = Promise<{ slug: string }>;
+
+// ISR — catalogue refreshes without a redeploy (build-plan §7 caching strategy).
+export const revalidate = 300;
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://asai.one";
 
 export async function generateStaticParams() {
   const products = await getProducts();
@@ -25,10 +32,18 @@ export async function generateMetadata({
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) return { title: "Product" };
+  const ogImage = product.images.map((i) => i.src).find(Boolean);
   return {
     title: product.title,
     description: product.shortDescription,
-    openGraph: { title: product.title, description: product.shortDescription },
+    alternates: { canonical: `/product/${product.slug}` },
+    openGraph: {
+      title: product.title,
+      description: product.shortDescription,
+      type: "website",
+      images: ogImage ? [ogImage] : undefined,
+    },
+    twitter: { card: "summary_large_image", images: ogImage ? [ogImage] : undefined },
   };
 }
 
@@ -40,8 +55,44 @@ export default async function ProductPage({ params }: { params: Params }) {
   const all = await getProducts();
   const related = all.filter((p) => p.id !== product.id).slice(0, 4);
 
+  const prices = product.variants.map((v) => v.price);
+  const inStock = product.variants.some((v) => v.stock > 0);
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.shortDescription,
+    sku: product.variants[0]?.sku,
+    brand: { "@type": "Brand", name: "ASAI.One" },
+    image: product.images
+      .map((img) => img.src)
+      .filter((src): src is string => Boolean(src))
+      // Storage URLs are already absolute; only prefix the site origin for /public paths.
+      .map((src) => (src.startsWith("http") ? src : `${SITE}${src}`)),
+    aggregateRating:
+      product.reviewSummary.count > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: product.reviewSummary.rating,
+            reviewCount: product.reviewSummary.count,
+          }
+        : undefined,
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "INR",
+      lowPrice: (Math.min(...prices) / 100).toFixed(2),
+      highPrice: (Math.max(...prices) / 100).toFixed(2),
+      offerCount: prices.length,
+      availability: inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url: `${SITE}/product/${product.slug}`,
+    },
+  };
+
   return (
     <div className="container-page py-8 pb-28 sm:pb-12">
+      <JsonLd data={productLd} />
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },
@@ -75,6 +126,15 @@ export default async function ProductPage({ params }: { params: Params }) {
 
           <div className="mt-8">
             <ProductPurchase product={product} />
+          </div>
+
+          <div className="mt-4">
+            <WishlistButton
+              productId={product.id}
+              productTitle={product.title}
+              display="button"
+              className="w-full sm:w-auto"
+            />
           </div>
 
           {/* policy strip */}
@@ -147,20 +207,22 @@ export default async function ProductPage({ params }: { params: Params }) {
             ))}
           </dl>
 
-          {/* review summary block */}
-          <div className="mt-6 border border-ink-12 bg-white p-5">
-            <div className="flex items-center gap-4">
-              <span className="font-display text-5xl text-navy-800">
-                {product.reviewSummary.rating.toFixed(1)}
-              </span>
-              <div>
-                <Rating summary={product.reviewSummary} showCount={false} />
-                <p className="mt-1 type-mono text-ink-30">
-                  {product.reviewSummary.count} verified reviews
-                </p>
+          {/* review summary block — only when there are real reviews */}
+          {product.reviewSummary.count > 0 && (
+            <div className="mt-6 border border-ink-12 bg-white p-5">
+              <div className="flex items-center gap-4">
+                <span className="font-display text-5xl text-navy-800">
+                  {product.reviewSummary.rating.toFixed(1)}
+                </span>
+                <div>
+                  <Rating summary={product.reviewSummary} showCount={false} />
+                  <p className="mt-1 type-mono text-ink-30">
+                    {product.reviewSummary.count} verified reviews
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </aside>
       </div>
 

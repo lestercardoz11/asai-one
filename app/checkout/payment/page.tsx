@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/cart-context";
-import {
-  useCheckout,
-  generateOrderId,
-} from "@/lib/checkout/checkout-context";
+import { useCheckout } from "@/lib/checkout/checkout-context";
+import { createOrder, verifyPayment } from "@/lib/checkout/order-actions";
 import type { Order, PaymentMethod } from "@/lib/types";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { Stepper } from "@/components/ui/stepper";
 import { OrderSummary } from "@/components/cart/order-summary";
@@ -23,11 +22,57 @@ const METHODS: { id: PaymentMethod; label: string; desc: string }[] = [
   { id: "cod", label: "Cash on Delivery", desc: "Pay when your order arrives" },
 ];
 
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description?: string;
+  prefill?: { name?: string; email?: string; contact?: string };
+  theme?: { color?: string };
+  handler: (response: RazorpayResponse) => void;
+  modal?: { ondismiss?: () => void };
+}
+
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => { open: () => void };
+  }
+}
+
+const RZP_SRC = "https://checkout.razorpay.com/v1/checkout.js";
+
+function loadRazorpay(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve();
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${RZP_SRC}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("load error")));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = RZP_SRC;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("load error"));
+    document.body.appendChild(script);
+  });
+}
+
 export default function PaymentPage() {
   const router = useRouter();
-  const { lines, subtotal, shipping: shipCost, discount, total, clear, ready } = useCart();
-  const { shipping, paymentMethod, setPaymentMethod, setLastOrder } = useCheckout();
+  const { lines, clear, ready, coupon } = useCart();
+  const { shipping, saveAddress, paymentMethod, setPaymentMethod, setLastOrder } = useCheckout();
   const [placing, setPlacing] = useState(false);
+  // Stable per checkout attempt so a double-click / retry can't create a 2nd order.
+  const idempotencyKey = useRef<string | null>(null);
 
   // Guard: must have shipping + a non-empty cart.
   useEffect(() => {
@@ -40,33 +85,83 @@ export default function PaymentPage() {
     return <div className="h-64 animate-fade" aria-busy />;
   }
 
-  const placeOrder = () => {
-    setPlacing(true);
-    const order: Order = {
-      id: generateOrderId(),
-      contactName: shipping.fullName,
-      contactEmail: shipping.email,
-      contactPhone: shipping.phone,
-      items: lines.map((l) => ({
-        productTitle: l.product.title,
-        variantLabel: l.variant.label,
-        sku: l.variant.sku,
-        unitPrice: l.variant.price,
-        qty: l.item.qty,
-      })),
-      paymentMethod,
-      paymentStatus: paymentMethod === "cod" ? "cod_pending" : "paid",
-      subtotal,
-      shipping: shipCost,
-      discount,
-      total,
-      status: "placed",
-      createdAt: new Date().toISOString(),
-    };
-    // Phase 2: no real charge — Razorpay order creation + webhook lands in Phase 4.
+  const finish = (order: Order) => {
     setLastOrder(order);
     clear();
     router.push("/checkout/confirmation");
+  };
+
+  const placeOrder = async () => {
+    if (!shipping) return;
+    setPlacing(true);
+    if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+    const result = await createOrder({
+      contact: shipping,
+      items: lines.map((l) => ({ variantId: l.variantId, qty: l.qty })),
+      paymentMethod,
+      couponCode: coupon?.code ?? null,
+      idempotencyKey: idempotencyKey.current,
+      saveAddress,
+    });
+
+    if (!result.ok || !result.order) {
+      setPlacing(false);
+      toast({
+        title: "Couldn't place order",
+        description: result.message ?? "Please try again.",
+        variant: "error",
+      });
+      return;
+    }
+    const order = result.order;
+
+    // Online payment with a real Razorpay order → open Checkout.
+    if (result.razorpay) {
+      try {
+        await loadRazorpay();
+      } catch {
+        setPlacing(false);
+        toast({ title: "Payment unavailable", description: "Couldn't load the payment window.", variant: "error" });
+        return;
+      }
+      const rzp = new window.Razorpay({
+        key: result.razorpay.keyId,
+        order_id: result.razorpay.orderId,
+        amount: result.razorpay.amount,
+        currency: "INR",
+        name: "ASAI.One",
+        description: "Commuter essentials",
+        prefill: {
+          name: shipping.fullName,
+          email: shipping.email,
+          contact: shipping.phone,
+        },
+        theme: { color: "#0b1624" },
+        handler: async (response: RazorpayResponse) => {
+          const verified = await verifyPayment({
+            dbOrderId: result.razorpay!.dbOrderId,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            signature: response.razorpay_signature,
+          });
+          if (verified.ok) {
+            finish(order);
+          } else {
+            setPlacing(false);
+            toast({ title: "Payment not verified", description: verified.message ?? "", variant: "error" });
+          }
+        },
+        modal: { ondismiss: () => setPlacing(false) },
+      });
+      rzp.open();
+      return;
+    }
+
+    // COD or demo-simulated payment → straight to confirmation.
+    if (result.simulated && paymentMethod !== "cod") {
+      toast({ title: "Demo payment", description: "No live payment gateway configured — simulated success.", variant: "success" });
+    }
+    finish(order);
   };
 
   return (
@@ -135,7 +230,9 @@ export default function PaymentPage() {
               ))}
             </div>
             <p className="mt-4 type-mono text-[10px] text-ink-30">
-              Demo checkout — no real payment is processed.
+              {process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+                ? "Payments are processed securely by Razorpay."
+                : "Demo checkout — no real payment is processed."}
             </p>
           </div>
 

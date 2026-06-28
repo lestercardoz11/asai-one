@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Eyebrow } from "@/components/ui/section";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { MailIcon, PinIcon, InstagramIcon, LinkedInIcon, YouTubeIcon } from "@/components/icons";
+import { MailIcon, PinIcon, InstagramIcon } from "@/components/icons";
 import { ContactForm } from "@/components/contact/contact-form";
 
 export const metadata: Metadata = {
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 };
 
 const SOCIALS = [
-  { label: "Instagram", href: "https://instagram.com", Icon: InstagramIcon },
-  { label: "LinkedIn", href: "https://linkedin.com", Icon: LinkedInIcon },
-  { label: "YouTube", href: "https://youtube.com", Icon: YouTubeIcon },
+  { label: "Instagram", href: "https://instagram.com/asai.one", Icon: InstagramIcon },
 ] as const;
 
 export default function ContactPage() {

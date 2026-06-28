@@ -60,22 +60,33 @@ type NavyRamp = {
 };
 
 /**
- * Attribute-based variant axes. Deliberately generic so the two-axis DryLock
- * case (weight × pack) and the simple tier/pack cases all fit one structure.
+ * Normalized variant model (post schema-rebuild). A product has ordered
+ * **options** (axes, e.g. "Pack size", "Size", "Pack", "Tier"), each with ordered
+ * **values** carrying their own display string. A variant pins exactly one value
+ * per option, referenced by id.
  */
-export interface VariantAttributes {
-  packSize?: number;
-  weightGrams?: number;
-  tier?: "basic" | "advance";
+export interface ProductOptionValue {
+  id: string;
+  /** Display label, e.g. "Pack of 6", "150g", "Advance". */
+  value: string;
 }
 
-export type VariantAxisKey = keyof VariantAttributes;
+export interface ProductOption {
+  id: string;
+  /** Axis label, e.g. "Pack size". */
+  name: string;
+  values: ProductOptionValue[];
+}
+
+/** A concrete selection: option id → chosen option-value id. */
+export type VariantSelection = Record<string, string>;
 
 export interface ProductVariant {
   id: string;
   productId: string;
   label: string;
-  attributes: VariantAttributes;
+  /** The option-value ids this variant pins (one per option). */
+  optionValueIds: string[];
   /** Selling price in paise. */
   price: number;
   /** Optional struck-through reference price in paise. */
@@ -110,18 +121,8 @@ export interface Product {
   variants: ProductVariant[];
   /** Default variant id selected on the PDP. */
   defaultVariantId: string;
-  /**
-   * Ordered axis metadata so the PDP renders selectors in a deliberate order
-   * with human labels. Derived axes that aren't listed still render generically.
-   */
-  variantAxes: VariantAxis[];
-}
-
-export interface VariantAxis {
-  key: VariantAxisKey;
-  label: string;
-  /** Render style for the option control. */
-  kind: "pack" | "weight" | "tier";
+  /** Ordered options (axes) so the PDP renders selectors in a deliberate order. */
+  options: ProductOption[];
 }
 
 /* — Commerce + account shapes (typed now, used progressively) — */
@@ -205,6 +206,8 @@ export interface Coupon {
   /** paise for flat, integer percent for percent, ignored for free_shipping. */
   value: number;
   minSubtotal?: number;
+  /** Optional cap on the discount amount in paise (percent coupons). */
+  maxDiscount?: number;
   label: string;
 }
 

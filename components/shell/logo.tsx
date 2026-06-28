@@ -28,8 +28,11 @@ export function Logo({
         // crisp white silhouette so it stays legible.
         className={cn("h-7 w-7", tone === "white" && "brightness-0 invert")}
       />
-      <span className="font-display inline-flex items-baseline text-2xl leading-none tracking-[0.04em]">
-        ASAI<span className="text-lg leading-none text-[#225777]">.One</span>
+      <span
+        className="inline-flex items-baseline text-2xl font-semibold leading-none tracking-[0.01em]"
+        style={{ fontFamily: "var(--font-oswald), sans-serif" }}
+      >
+        ASAI<span className="text-[#225777]">.One</span>
       </span>
     </span>
   );

@@ -11,6 +11,9 @@ import { NotifyForm } from "@/components/shop/notify-form";
 
 type Params = Promise<{ mode: string }>;
 
+// ISR — category/coming-soon toggles from the admin CMS reflect without redeploy.
+export const revalidate = 300;
+
 export async function generateStaticParams() {
   const modes = await getModes();
   return modes.map((m) => ({ mode: m.slug }));

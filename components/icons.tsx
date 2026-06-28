@@ -176,6 +176,14 @@ export function StarIcon(props: IconProps) {
   );
 }
 
+export function HeartIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 20.5 4.2 12.9a4.6 4.6 0 0 1 0-6.6 4.7 4.7 0 0 1 6.6 0l1.2 1.2 1.2-1.2a4.7 4.7 0 0 1 6.6 0 4.6 4.6 0 0 1 0 6.6L12 20.5Z" />
+    </svg>
+  );
+}
+
 export function CheckIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

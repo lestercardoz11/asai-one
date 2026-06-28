@@ -83,14 +83,7 @@ export function ProductCard({
       </Link>
 
       <div className="mt-auto p-4 pt-0">
-        <QuickAddButton
-          full
-          variantId={defaultVariant.id}
-          productId={product.id}
-          productTitle={product.title}
-          variantLabel={defaultVariant.label}
-          hasChoices={hasChoices}
-        />
+        <QuickAddButton full product={product} />
       </div>
     </article>
   );

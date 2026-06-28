@@ -49,18 +49,20 @@ export function ProductImage({
   className,
   priority,
 }: {
-  art: ArtDescriptor;
+  art?: ArtDescriptor;
   alt: string;
   className?: string;
   priority?: boolean;
 }) {
+  const d: ArtDescriptor =
+    art ?? { pattern: "compass", accent: 500, tone: "white", seed: alt };
   // Real photography: fill the (already square, white) call-site container and
   // contain so the whole product is shown without cropping. `preload` replaces
   // the Next 16-deprecated `priority` prop for above-the-fold shots.
-  if (art.src) {
+  if (d.src) {
     return (
       <Image
-        src={art.src}
+        src={d.src}
         alt={alt}
         fill
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px"
@@ -70,11 +72,11 @@ export function ProductImage({
     );
   }
 
-  const ground = TONES[art.tone];
-  const isDark = art.tone === "navy";
+  const ground = TONES[d.tone];
+  const isDark = d.tone === "navy";
   const ink = isDark ? "#ffffff" : "#0a0a0a";
-  const accent = NAVY[art.accent as number] ?? NAVY[500];
-  const rand = seeded(art.seed);
+  const accent = NAVY[d.accent as number] ?? NAVY[500];
+  const rand = seeded(d.seed);
   const fig = isDark ? NAVY[200] : accent;
   const faint = isDark ? "rgba(255,255,255,0.14)" : "rgba(10,10,10,0.10)";
 
@@ -100,7 +102,7 @@ export function ProductImage({
         ))}
       </g>
 
-      <Figure pattern={art.pattern} fig={fig} ink={ink} accent={accent} rand={rand} />
+      <Figure pattern={d.pattern} fig={fig} ink={ink} accent={accent} rand={rand} />
 
       {/* corner registration ticks — spec-sheet detail */}
       <g stroke={ink} strokeWidth="1.25" opacity={0.5}>
