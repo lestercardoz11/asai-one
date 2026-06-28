@@ -60,7 +60,6 @@ export function OrderSummary({
       </div>
       <div className="flex flex-col gap-3 px-5 py-5">
         <FreeShipBar />
-        <div className="h-px bg-ink-12" />
         <Row
           label={`Subtotal (${itemCount} ${itemCount === 1 ? "item" : "items"})`}
           value={formatINR(subtotal)}
