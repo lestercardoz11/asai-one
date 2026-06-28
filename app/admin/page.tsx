@@ -7,6 +7,9 @@ import {
   parseRange,
   type AdminRange,
 } from "@/lib/admin/dashboard";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { Card } from "@/components/admin/ui/card";
+import { KpiCard } from "@/components/admin/ui/kpi-card";
 
 interface Kpis {
   revenue_paise: number;
@@ -66,42 +69,41 @@ export default async function AdminDashboard({
     .slice(0, 12);
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="type-display text-4xl text-navy-800">Dashboard</h1>
-          <p className="mt-1 type-mono text-[11px] text-ink-30">Last {days} days</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <RangeSelector current={days} />
-          <Link
-            href={`/admin/orders/export?range=${days}`}
-            prefetch={false}
-            className="border border-ink-12 bg-white px-3 py-1.5 type-condensed text-xs text-navy-500 transition-colors hover:text-navy-800"
-          >
-            Download CSV
-          </Link>
-        </div>
-      </div>
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title="Dashboard"
+        description={`Last ${days} days`}
+        actions={
+          <>
+            <RangeSelector current={days} />
+            <Link
+              href={`/admin/orders/export?range=${days}`}
+              prefetch={false}
+              className="border border-ink-12 bg-white px-3 py-1.5 type-condensed text-xs text-navy-500 transition-colors hover:text-navy-800"
+            >
+              Download CSV
+            </Link>
+          </>
+        }
+      />
 
       {!k ? (
         <p className="mt-8 text-ink-60">Analytics unavailable.</p>
       ) : (
         <>
           <div className="mt-8 grid grid-cols-2 gap-px border border-ink-12 bg-ink-12 lg:grid-cols-4">
-            <Kpi label="Revenue" value={formatINR(k.revenue_paise)} sub={delta(k.revenue_paise, k.previous_revenue_paise)} />
-            <Kpi label="Orders" value={String(k.orders)} sub={delta(k.orders, k.previous_orders)} />
-            <Kpi label="Avg. order" value={formatINR(Math.round(k.aov_paise))} />
-            <Kpi label="New customers" value={String(k.new_customers)} />
-            <Kpi label="Pending orders" value={String(k.pending_orders)} alert={k.pending_orders > 0} />
-            <Kpi label="Low stock" value={String(k.low_stock_count)} alert={k.low_stock_count > 0} />
-            <Kpi label="Pending reviews" value={String(k.pending_reviews)} />
+            <KpiCard label="Revenue" value={formatINR(k.revenue_paise)} sub={delta(k.revenue_paise, k.previous_revenue_paise)} />
+            <KpiCard label="Orders" value={String(k.orders)} sub={delta(k.orders, k.previous_orders)} />
+            <KpiCard label="Avg. order" value={formatINR(Math.round(k.aov_paise))} />
+            <KpiCard label="New customers" value={String(k.new_customers)} />
+            <KpiCard label="Pending orders" value={String(k.pending_orders)} alert={k.pending_orders > 0} />
+            <KpiCard label="Low stock" value={String(k.low_stock_count)} alert={k.low_stock_count > 0} />
+            <KpiCard label="Pending reviews" value={String(k.pending_reviews)} />
           </div>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <section className="border border-ink-12 bg-white p-5">
-              <h2 className="type-condensed text-sm text-navy-800">Revenue · last {chartDays} days</h2>
-              <div className="mt-5 flex h-40 items-end gap-1">
+            <Card title={`Revenue · last ${chartDays} days`}>
+              <div className="flex h-40 items-end gap-1">
                 {(series ?? []).map((d) => (
                   <div key={d.bucket_date} className="flex flex-1 flex-col items-center gap-1" title={`${d.bucket_date}: ${formatINR(Number(d.revenue_paise))}`}>
                     <div
@@ -114,12 +116,11 @@ export default async function AdminDashboard({
                   <p className="text-sm text-ink-30">No revenue in this range.</p>
                 )}
               </div>
-            </section>
+            </Card>
 
-            <section className="border border-ink-12 bg-white p-5">
-              <h2 className="type-condensed text-sm text-navy-800">Top products · {days} days</h2>
+            <Card title={`Top products · ${days} days`}>
               {top && top.length > 0 ? (
-                <ul className="mt-4 flex flex-col gap-2">
+                <ul className="flex flex-col gap-2">
                   {top.map((p) => (
                     <li key={p.product_id} className="flex items-center justify-between text-sm">
                       <span className="text-navy-800">{p.product_name}</span>
@@ -130,47 +131,51 @@ export default async function AdminDashboard({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 text-sm text-ink-30">No sales yet.</p>
+                <p className="text-sm text-ink-30">No sales yet.</p>
               )}
-            </section>
+            </Card>
           </div>
 
-          <section className="mt-8 border border-ink-12 bg-white">
-            <div className="flex items-center justify-between border-b border-ink-12 px-5 py-4">
-              <h2 className="type-condensed text-sm text-navy-800">Low stock</h2>
-              <Link href="/admin/products" className="type-mono text-[10px] text-navy-500 hover:text-navy-800">
-                Manage stock →
-              </Link>
-            </div>
-            {lowStock.length > 0 ? (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-ink-12 text-left type-mono text-[10px] uppercase text-ink-30">
-                    <th className="px-5 py-3">Product</th>
-                    <th className="px-5 py-3">Variant</th>
-                    <th className="px-5 py-3 text-right">Qty</th>
-                    <th className="px-5 py-3 text-right">Threshold</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ink-12">
-                  {lowStock.map((r, i) => (
-                    <tr key={`${r.products?.name}-${r.product_variants?.sku}-${i}`}>
-                      <td className="px-5 py-3 text-navy-800">{r.products?.name ?? "—"}</td>
-                      <td className="px-5 py-3 text-ink-60">
-                        {r.product_variants?.variant_name ?? r.product_variants?.sku ?? "—"}
-                      </td>
-                      <td className={`px-5 py-3 text-right tabular-nums ${r.quantity === 0 ? "text-error" : "text-navy-800"}`}>
-                        {r.quantity}
-                      </td>
-                      <td className="px-5 py-3 text-right tabular-nums text-ink-30">{r.low_stock_threshold}</td>
+          <div className="mt-8">
+            <Card
+              title="Low stock"
+              actions={
+                <Link href="/admin/products" className="type-mono text-[10px] text-navy-500 hover:text-navy-800">
+                  Manage stock →
+                </Link>
+              }
+              padded={false}
+            >
+              {lowStock.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-ink-12 text-left type-mono text-[10px] uppercase text-ink-30">
+                      <th className="px-5 py-3">Product</th>
+                      <th className="px-5 py-3">Variant</th>
+                      <th className="px-5 py-3 text-right">Qty</th>
+                      <th className="px-5 py-3 text-right">Threshold</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="px-5 py-8 text-center text-sm text-ink-30">All variants are above their thresholds.</p>
-            )}
-          </section>
+                  </thead>
+                  <tbody className="divide-y divide-ink-12">
+                    {lowStock.map((r, i) => (
+                      <tr key={`${r.products?.name}-${r.product_variants?.sku}-${i}`}>
+                        <td className="px-5 py-3 text-navy-800">{r.products?.name ?? "—"}</td>
+                        <td className="px-5 py-3 text-ink-60">
+                          {r.product_variants?.variant_name ?? r.product_variants?.sku ?? "—"}
+                        </td>
+                        <td className={`px-5 py-3 text-right tabular-nums ${r.quantity === 0 ? "text-error" : "text-navy-800"}`}>
+                          {r.quantity}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums text-ink-30">{r.low_stock_threshold}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="px-5 py-8 text-center text-sm text-ink-30">All variants are above their thresholds.</p>
+              )}
+            </Card>
+          </div>
         </>
       )}
     </div>
@@ -195,18 +200,6 @@ function RangeSelector({ current }: { current: AdminRange }) {
           </Link>
         );
       })}
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub, alert }: { label: string; value: string; sub?: string; alert?: boolean }) {
-  return (
-    <div className="bg-white p-5">
-      <p className="type-mono text-[10px] text-ink-30">{label}</p>
-      <p className={`mt-1 font-condensed text-2xl font-semibold tabular-nums ${alert ? "text-error" : "text-navy-800"}`}>
-        {value}
-      </p>
-      {sub && <p className="type-mono text-[10px] text-ink-60">{sub}</p>}
     </div>
   );
 }
