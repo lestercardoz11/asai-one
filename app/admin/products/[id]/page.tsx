@@ -1,5 +1,4 @@
-import Image from "next/image";
-import Link from "next/link";
+﻿import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -19,11 +18,14 @@ import {
 } from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
-import type { ReactNode } from "react";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { Card } from "@/components/admin/ui/card";
+import { FormGrid, AdminField } from "@/components/admin/ui/form-grid";
+import { FormActions } from "@/components/admin/ui/form-actions";
+import { Input, Textarea } from "@/components/ui/field";
 
 type Params = Promise<{ id: string }>;
 
-const fieldCls = "mt-1 w-full border border-ink-12 px-3 py-2 text-sm";
 const labelCls = "type-mono text-[10px] text-ink-30";
 const sectionTitle = "type-condensed text-lg text-navy-800";
 
@@ -52,98 +54,76 @@ export default async function AdminProductEdit({ params }: { params: Params }) {
   const toRupees = (paise: number | null | undefined) => (paise != null ? paise / 100 : "");
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex items-center justify-between">
-        <Link href="/admin/products" className="type-condensed text-xs text-navy-500 hover:text-navy-800">
-          ← Products
-        </Link>
-        <span className="type-mono text-[10px] text-ink-30">{product.sku}</span>
-      </div>
-      <h1 className="mt-2 type-display text-4xl text-navy-800">{product.name}</h1>
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title={product.name}
+        backHref="/admin/products"
+        backLabel="Products"
+        actions={<span className="type-mono text-[10px] text-ink-30">{product.sku}</span>}
+      />
 
       {/* ───────────────────────────── Details ───────────────────────────── */}
-      <section className="mt-8">
-        <h2 className={sectionTitle}>Details</h2>
-        <form action={updateProduct} className="mt-3 border border-ink-12 bg-white p-5">
-          <input type="hidden" name="id" value={product.id} />
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className={labelCls}>Name</span>
-              <input name="name" defaultValue={product.name} required className={fieldCls} />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Web address (slug)</span>
-              <input name="slug" defaultValue={product.slug} required className={fieldCls} />
-              <Hint>Lowercase words-with-dashes — this appears in the product&rsquo;s link.</Hint>
-            </label>
-          </div>
-          <label className="mt-4 block">
-            <span className={labelCls}>Short description</span>
-            <input name="short_description" defaultValue={product.short_description ?? ""} className={fieldCls} />
-          </label>
-          <label className="mt-4 block">
-            <span className={labelCls}>Description</span>
-            <textarea name="description" defaultValue={product.description ?? ""} rows={4} className={fieldCls} />
-          </label>
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className={labelCls}>Price (₹)</span>
-              <input name="price_rupees" type="number" min={0} step="0.01" defaultValue={product.price_paise / 100} required className={fieldCls} />
-              <Hint>Selling price in rupees, e.g. 299 or 299.50.</Hint>
-            </label>
-            <label className="block">
-              <span className={labelCls}>Original price (₹)</span>
-              <input name="original_price_rupees" type="number" min={0} step="0.01" defaultValue={toRupees(product.original_price_paise)} className={fieldCls} />
-              <Hint>Optional. Shown struck-through to display a discount.</Hint>
-            </label>
-          </div>
-          <label className="mt-4 block">
-            <span className={labelCls}>Tags (comma-separated)</span>
-            <input name="tags" defaultValue={(product.tags ?? []).join(", ")} className={fieldCls} />
-          </label>
-          <label className="mt-4 block">
-            <span className={labelCls}>Features (one per line)</span>
-            <textarea name="features" defaultValue={(product.features ?? []).join("\n")} rows={4} className={fieldCls} />
-          </label>
-          <label className="mt-4 block">
-            <span className={labelCls}>Specifications</span>
-            <textarea
-              name="specs"
-              defaultValue={specsText}
-              rows={6}
-              placeholder={"Material: Cotton\nWeight: 90 g"}
-              className={fieldCls}
-            />
-            <Hint>One per line, written as “Label: Value”.</Hint>
-          </label>
-          <label className="mt-4 block">
-            <span className={labelCls}>Compatibility</span>
-            <input name="compatibility" defaultValue={product.compatibility ?? ""} className={fieldCls} />
-          </label>
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className={labelCls}>HSN code</span>
-              <input name="hsn_code" defaultValue={product.hsn_code ?? ""} className={fieldCls} />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Return window (days)</span>
-              <input name="return_window_days" type="number" min={0} defaultValue={product.return_window_days} className={fieldCls} />
-            </label>
-          </div>
-          <label className="mt-4 block">
-            <span className={labelCls}>Shipping policy</span>
-            <textarea name="shipping_policy" defaultValue={product.shipping_policy ?? ""} rows={2} className={fieldCls} />
-          </label>
-          <div className="mt-4 flex flex-wrap gap-4 text-sm">
-            <Flag name="is_active" label="Live" checked={product.is_active} />
-            <Flag name="is_featured" label="Best seller" checked={product.is_featured} />
-            <Flag name="is_new" label="New" checked={product.is_new} />
-            <Flag name="is_returnable" label="Returnable" checked={product.is_returnable} />
-          </div>
-          <Button type="submit" size="sm" className="mt-5">
-            Save details
-          </Button>
-        </form>
+      <section className="mt-2">
+        <Card title="Details">
+          <form action={updateProduct}>
+            <input type="hidden" name="id" value={product.id} />
+            <FormGrid>
+              <AdminField label="Name" required span="half">
+                <Input name="name" defaultValue={product.name} required />
+              </AdminField>
+              <AdminField
+                label="Web address (slug)"
+                required
+                span="half"
+                hint="Lowercase words-with-dashes — this appears in the product's link."
+              >
+                <Input name="slug" defaultValue={product.slug} required />
+              </AdminField>
+              <AdminField label="Short description" span="full">
+                <Input name="short_description" defaultValue={product.short_description ?? ""} />
+              </AdminField>
+              <AdminField label="Description" span="full">
+                <Textarea name="description" defaultValue={product.description ?? ""} rows={4} />
+              </AdminField>
+              <AdminField label="Price (₹)" required span="half" hint="Selling price in rupees, e.g. 299 or 299.50.">
+                <Input name="price_rupees" type="number" min={0} step="0.01" defaultValue={product.price_paise / 100} required />
+              </AdminField>
+              <AdminField label="Original price (₹)" span="half" hint="Optional. Shown struck-through to display a discount.">
+                <Input name="original_price_rupees" type="number" min={0} step="0.01" defaultValue={toRupees(product.original_price_paise)} />
+              </AdminField>
+              <AdminField label="Tags (comma-separated)" span="full">
+                <Input name="tags" defaultValue={(product.tags ?? []).join(", ")} />
+              </AdminField>
+              <AdminField label="Features (one per line)" span="full">
+                <Textarea name="features" defaultValue={(product.features ?? []).join("\n")} rows={4} />
+              </AdminField>
+              <AdminField label="Specifications" span="full" hint={`One per line, written as "Label: Value".`}>
+                <Textarea name="specs" defaultValue={specsText} rows={6} placeholder={"Material: Cotton\nWeight: 90 g"} />
+              </AdminField>
+              <AdminField label="Compatibility" span="full">
+                <Input name="compatibility" defaultValue={product.compatibility ?? ""} />
+              </AdminField>
+              <AdminField label="HSN code" span="half">
+                <Input name="hsn_code" defaultValue={product.hsn_code ?? ""} />
+              </AdminField>
+              <AdminField label="Return window (days)" span="half">
+                <Input name="return_window_days" type="number" min={0} defaultValue={product.return_window_days} />
+              </AdminField>
+              <AdminField label="Shipping policy" span="full">
+                <Textarea name="shipping_policy" defaultValue={product.shipping_policy ?? ""} rows={2} />
+              </AdminField>
+              <div className="flex flex-wrap gap-4 text-sm sm:col-span-2">
+                <Flag name="is_active" label="Live" checked={product.is_active} />
+                <Flag name="is_featured" label="Best seller" checked={product.is_featured} />
+                <Flag name="is_new" label="New" checked={product.is_new} />
+                <Flag name="is_returnable" label="Returnable" checked={product.is_returnable} />
+              </div>
+            </FormGrid>
+            <FormActions sticky>
+              <Button type="submit">Save details</Button>
+            </FormActions>
+          </form>
+        </Card>
       </section>
 
       {/* ─────────────────────── Options & values ─────────────────────────── */}
@@ -392,7 +372,3 @@ function Flag({ name, label, checked }: { name: string; label: string; checked: 
   );
 }
 
-/** Small grey help text under a field. */
-function Hint({ children }: { children: ReactNode }) {
-  return <span className="mt-1 block text-[11px] leading-snug text-ink-30">{children}</span>;
-}
