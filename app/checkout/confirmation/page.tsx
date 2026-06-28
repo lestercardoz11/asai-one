@@ -50,9 +50,9 @@ function ConfirmationInner() {
     const hash = window.location.hash; // e.g. "#t=<uuid>"
     const token = hash.startsWith("#t=") ? decodeURIComponent(hash.slice(3)) : null;
     dispatch({ type: "start" });
-    getOrderForConfirmation({ number, token }).then((order) =>
-      dispatch({ type: "done", order }),
-    );
+    getOrderForConfirmation({ number, token })
+      .then((order) => dispatch({ type: "done", order }))
+      .catch(() => dispatch({ type: "done", order: null }));
   }, [lastOrder, number]);
 
   const o = lastOrder ?? (state.status === "done" ? state.order : null);
