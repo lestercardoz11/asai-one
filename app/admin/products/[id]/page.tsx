@@ -159,7 +159,7 @@ export default async function AdminProductEdit({ params }: { params: Params }) {
                   <form action={addOptionValue} className="mt-3 flex items-end gap-2">
                     <input type="hidden" name="option_id" value={opt.id} />
                     <input type="hidden" name="product_id" value={product.id} />
-                    <Input name="value" placeholder="Add value..." required className="h-10 w-56" />
+                    <Input name="value" placeholder="Add value..." required className="w-56" />
                     <Button type="submit" size="sm" variant="secondary">Add value</Button>
                   </form>
                 </div>
@@ -169,7 +169,7 @@ export default async function AdminProductEdit({ params }: { params: Params }) {
               <input type="hidden" name="product_id" value={product.id} />
               <div className="flex flex-col gap-1.5">
                 <label className="type-mono text-ink-60">New option (e.g. Pack size)</label>
-                <Input name="name" required className="h-10 w-64" />
+                <Input name="name" required className="w-64" />
               </div>
               <Button type="submit" size="sm" variant="secondary">Add option</Button>
             </form>

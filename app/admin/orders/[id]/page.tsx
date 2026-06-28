@@ -261,7 +261,7 @@ export default async function AdminOrderDetail({ params }: { params: Params }) {
                   </Select>
                 </AdminField>
                 <AdminField label="Note">
-                  <Textarea name="note" rows={2} />
+                  <Textarea name="note" rows={2} placeholder="Note (optional)…" />
                 </AdminField>
               </FormGrid>
               <FormActions>

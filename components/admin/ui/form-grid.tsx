@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Field } from "@/components/ui/field";
 
@@ -32,16 +34,24 @@ export function AdminField({
   className?: string;
   children: ReactNode;
 }) {
+  const autoId = useId();
+  const id = htmlFor ?? autoId;
+  // Inject the id onto the single control child unless it already has one,
+  // so the Field's <label htmlFor> associates with it.
+  const control =
+    isValidElement(children) && (children as ReactElement<{ id?: string }>).props.id == null
+      ? cloneElement(children as ReactElement<{ id?: string }>, { id })
+      : children;
   return (
     <Field
       label={label}
-      htmlFor={htmlFor}
+      htmlFor={label ? id : undefined}
       hint={hint}
       error={error}
       required={required}
       className={cn(span === "full" && "sm:col-span-2", className)}
     >
-      {children}
+      {control}
     </Field>
   );
 }
