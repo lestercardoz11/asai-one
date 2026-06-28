@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cart/cart-context";
 import { SiteHeader } from "@/components/shell/site-header";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { ToastViewport } from "@/components/ui/toast";
+import { MiniCart } from "@/components/cart/mini-cart";
 import { JsonLd } from "@/components/seo/json-ld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://asai.one";
@@ -121,6 +122,7 @@ export default function RootLayout({
             {children}
           </main>
           <SiteFooter />
+          <MiniCart />
           <ToastViewport />
         </CartProvider>
       </body>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { FreeShipBar } from "@/components/cart/free-ship-bar";
 
 function Row({
   label,
@@ -58,6 +59,7 @@ export function OrderSummary({
         <h2 className="type-condensed text-sm text-navy-800">{title}</h2>
       </div>
       <div className="flex flex-col gap-3 px-5 py-5">
+        <FreeShipBar />
         <Row
           label={`Subtotal (${itemCount} ${itemCount === 1 ? "item" : "items"})`}
           value={formatINR(subtotal)}

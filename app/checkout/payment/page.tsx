@@ -6,21 +6,14 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/cart-context";
 import { useCheckout } from "@/lib/checkout/checkout-context";
 import { createOrder, verifyPayment } from "@/lib/checkout/order-actions";
-import type { Order, PaymentMethod } from "@/lib/types";
+import type { Order } from "@/lib/types";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 import { Stepper } from "@/components/ui/stepper";
 import { OrderSummary } from "@/components/cart/order-summary";
 import { Button } from "@/components/ui/button";
-import { LockIcon, ShieldIcon, CheckIcon } from "@/components/icons";
 import { CHECKOUT_STEPS } from "@/components/checkout/steps";
-
-const METHODS: { id: PaymentMethod; label: string; desc: string }[] = [
-  { id: "upi", label: "UPI", desc: "GPay · PhonePe · Paytm & more" },
-  { id: "card", label: "Credit / Debit Card", desc: "Visa · Mastercard · RuPay" },
-  { id: "netbanking", label: "Net Banking", desc: "All major Indian banks" },
-  { id: "cod", label: "Cash on Delivery", desc: "Pay when your order arrives" },
-];
+import { TrustRow } from "@/components/checkout/trust-row";
+import { PaymentMethods, type PayChoice } from "@/components/checkout/payment-methods";
 
 interface RazorpayResponse {
   razorpay_payment_id: string;
@@ -35,6 +28,8 @@ interface RazorpayOptions {
   currency: string;
   name: string;
   description?: string;
+  image?: string;
+  notes?: Record<string, string>;
   prefill?: { name?: string; email?: string; contact?: string };
   theme?: { color?: string };
   handler: (response: RazorpayResponse) => void;
@@ -71,6 +66,9 @@ export default function PaymentPage() {
   const { lines, clear, ready, coupon } = useCart();
   const { shipping, saveAddress, paymentMethod, setPaymentMethod, setLastOrder } = useCheckout();
   const [placing, setPlacing] = useState(false);
+  const [payStatus, setPayStatus] = useState<"idle" | "failed">("idle");
+  const choice: PayChoice = paymentMethod === "cod" ? "cod" : "online";
+  const onChoice = (v: PayChoice) => setPaymentMethod(v === "cod" ? "cod" : "upi");
   // Stable per checkout attempt so a double-click / retry can't create a 2nd order.
   const idempotencyKey = useRef<string | null>(null);
 
@@ -85,15 +83,19 @@ export default function PaymentPage() {
     return <div className="h-64 animate-fade" aria-busy />;
   }
 
-  const finish = (order: Order) => {
+  const finish = (order: Order, accessToken?: string) => {
     setLastOrder(order);
     clear();
-    router.push("/checkout/confirmation");
+    // Token rides in the URL fragment (never sent to servers / Referer / logs);
+    // `o` stays in the query since the order number is not sensitive.
+    const base = `/checkout/confirmation?o=${encodeURIComponent(order.id)}`;
+    router.push(accessToken ? `${base}#t=${encodeURIComponent(accessToken)}` : base);
   };
 
   const placeOrder = async () => {
     if (!shipping) return;
     setPlacing(true);
+    setPayStatus("idle");
     if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
     const result = await createOrder({
       contact: shipping,
@@ -130,7 +132,9 @@ export default function PaymentPage() {
         amount: result.razorpay.amount,
         currency: "INR",
         name: "ASAI.One",
-        description: "Commuter essentials",
+        description: `Order ${order.id} · ASAI.One`,
+        image: "/logo.png",
+        notes: { order_number: order.id },
         prefill: {
           name: shipping.fullName,
           email: shipping.email,
@@ -145,13 +149,19 @@ export default function PaymentPage() {
             signature: response.razorpay_signature,
           });
           if (verified.ok) {
-            finish(order);
+            finish(order, result.accessToken);
           } else {
             setPlacing(false);
+            setPayStatus("failed");
             toast({ title: "Payment not verified", description: verified.message ?? "", variant: "error" });
           }
         },
-        modal: { ondismiss: () => setPlacing(false) },
+        modal: {
+          ondismiss: () => {
+            setPlacing(false);
+            setPayStatus("failed");
+          },
+        },
       });
       rzp.open();
       return;
@@ -161,7 +171,7 @@ export default function PaymentPage() {
     if (result.simulated && paymentMethod !== "cod") {
       toast({ title: "Demo payment", description: "No live payment gateway configured — simulated success.", variant: "success" });
     }
-    finish(order);
+    finish(order, result.accessToken);
   };
 
   return (
@@ -176,64 +186,29 @@ export default function PaymentPage() {
           </p>
 
           {/* methods */}
-          <div className="mt-8 flex flex-col gap-3">
-            {METHODS.map((m) => {
-              const active = paymentMethod === m.id;
-              return (
-                <label
-                  key={m.id}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-4 border bg-white p-4 transition-colors",
-                    active ? "border-navy-800" : "border-ink-12 hover:border-navy-300",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid h-5 w-5 shrink-0 place-items-center rounded-full border",
-                      active ? "border-navy-800" : "border-ink-30",
-                    )}
-                  >
-                    {active && <span className="h-2.5 w-2.5 rounded-full bg-navy-800" />}
-                  </span>
-                  <input
-                    type="radio"
-                    name="payment"
-                    className="sr-only"
-                    checked={active}
-                    onChange={() => setPaymentMethod(m.id)}
-                  />
-                  <span className="flex-1">
-                    <span className="type-condensed block text-sm text-navy-800">{m.label}</span>
-                    <span className="block text-[13px] text-ink-60">{m.desc}</span>
-                  </span>
-                  {active && <CheckIcon className="h-5 w-5 text-navy-500" />}
-                </label>
-              );
-            })}
+          <div className="mt-8">
+            <PaymentMethods value={choice} onChange={onChoice} />
           </div>
 
+          {payStatus === "failed" && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="mt-6 border border-error/40 bg-error/5 p-4"
+            >
+              <p className="type-condensed text-sm text-navy-800">Payment didn&apos;t go through</p>
+              <p className="mt-1 text-[13px] text-ink-60">
+                You weren&apos;t charged. You can retry — your order is still reserved.
+              </p>
+              <Button size="sm" className="mt-3" onClick={placeOrder} disabled={placing}>
+                Retry payment
+              </Button>
+            </div>
+          )}
+
           {/* trust */}
-          <div className="mt-8 border border-ink-12 bg-warm-white p-5">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <span className="inline-flex items-center gap-2 type-condensed text-xs text-navy-800">
-                <LockIcon className="h-4 w-4" /> Secure Checkout
-              </span>
-              <span className="inline-flex items-center gap-2 type-condensed text-xs text-navy-800">
-                <ShieldIcon className="h-4 w-4" /> 256-bit Encrypted
-              </span>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["Razorpay", "UPI", "VISA", "Mastercard", "RuPay"].map((logo) => (
-                <span key={logo} className="border border-ink-12 bg-white px-2.5 py-1 type-mono text-[10px] text-ink-60">
-                  {logo}
-                </span>
-              ))}
-            </div>
-            <p className="mt-4 type-mono text-[10px] text-ink-30">
-              {process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-                ? "Payments are processed securely by Razorpay."
-                : "Demo checkout — no real payment is processed."}
-            </p>
+          <div className="mt-8">
+            <TrustRow live={!!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID} />
           </div>
 
           <div className="mt-8 flex items-center justify-between">

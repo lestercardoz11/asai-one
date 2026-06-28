@@ -2,10 +2,12 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type ReactNode,
 } from "react";
 import type { ArtDescriptor, Coupon } from "@/lib/types";
@@ -111,6 +113,10 @@ interface CartContextValue {
   clear: () => void;
   applyCoupon: (code: string) => Promise<{ ok: boolean; message: string }>;
   removeCoupon: () => void;
+  /** Mini-cart drawer visibility. */
+  drawerOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -120,6 +126,9 @@ const initialState: CartState = { items: [], coupon: null };
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [ready, setReady] = useReducerReady();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const openCart = useCallback(() => setDrawerOpen(true), []);
+  const closeCart = useCallback(() => setDrawerOpen(false), []);
 
   // Hydrate from localStorage once on mount.
   useEffect(() => {
@@ -205,6 +214,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return { ok: true, message: result.message };
     },
     removeCoupon: () => dispatch({ type: "removeCoupon" }),
+    drawerOpen,
+    openCart,
+    closeCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

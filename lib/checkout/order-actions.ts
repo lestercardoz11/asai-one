@@ -80,6 +80,8 @@ export interface CreateOrderResult {
   razorpay?: { orderId: string; amount: number; keyId: string; dbOrderId: string };
   /** True when no payment provider / persistence is configured (demo mode). */
   simulated?: boolean;
+  /** Per-order token for the shareable confirmation URL (persisted orders only). */
+  accessToken?: string;
 }
 
 function toE164(phone: string): string {
@@ -233,7 +235,7 @@ async function resolveExistingOrder(
 ): Promise<CreateOrderResult | null> {
   const { data: existing } = await admin
     .from("orders")
-    .select("id, order_number")
+    .select("id, order_number, access_token")
     .eq("idempotency_key", key)
     .maybeSingle();
   if (!existing) return null;
@@ -247,10 +249,11 @@ async function resolveExistingOrder(
     return {
       ok: true,
       order,
+      accessToken: existing.access_token,
       razorpay: { orderId: pay.razorpay_order_id, amount: total, keyId: razorpayKeyId()!, dbOrderId: existing.id },
     };
   }
-  return { ok: true, order };
+  return { ok: true, order, accessToken: existing.access_token };
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
@@ -346,7 +349,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const { data: orderRow, error: orderErr } = await admin
     .from("orders")
     .insert(orderPayload as OrderInsert)
-    .select("id, order_number")
+    .select("id, order_number, access_token")
     .single();
   // Lost a race on the unique idempotency key → return the winner's order.
   if (orderErr && (orderErr as { code?: string }).code === "23505" && idempotencyKey) {
@@ -397,7 +400,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       status: "created",
       amount_paise: total,
     });
-    return { ok: true, order };
+    return { ok: true, order, accessToken: orderRow.access_token };
   }
 
   // Online payment with Razorpay configured.
@@ -415,6 +418,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       return {
         ok: true,
         order,
+        accessToken: orderRow.access_token,
         razorpay: {
           orderId: rzp.id,
           amount: total,
@@ -446,7 +450,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     captured_at: new Date().toISOString(),
   });
   await finalizeOrder(orderRow.id, lines, couponId, user?.id ?? null, discount);
-  return { ok: true, order, simulated: true };
+  return { ok: true, order, simulated: true, accessToken: orderRow.access_token };
 }
 
 export async function verifyPayment(input: {

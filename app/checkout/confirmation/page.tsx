@@ -1,25 +1,64 @@
 "use client";
 
+import { useEffect, useReducer, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCheckout } from "@/lib/checkout/checkout-context";
-import type { PaymentMethod } from "@/lib/types";
+import { getOrderForConfirmation } from "@/lib/checkout/confirmation";
+import type { Order } from "@/lib/types";
 import { formatINR } from "@/lib/format";
 import { Stepper } from "@/components/ui/stepper";
 import { buttonVariants } from "@/components/ui/button";
 import { CheckIcon, MailIcon, TruckIcon } from "@/components/icons";
 import { CHECKOUT_STEPS } from "@/components/checkout/steps";
-
-const METHOD_LABEL: Record<PaymentMethod, string> = {
-  upi: "UPI",
-  card: "Credit / Debit Card",
-  netbanking: "Net Banking",
-  cod: "Cash on Delivery",
-};
+import { OrderTimeline } from "@/components/checkout/order-timeline";
 
 export default function ConfirmationPage() {
-  const { lastOrder } = useCheckout();
+  return (
+    <Suspense fallback={<div className="h-64 animate-fade" aria-busy />}>
+      <ConfirmationInner />
+    </Suspense>
+  );
+}
 
-  if (!lastOrder) {
+type FetchState =
+  | { status: "idle"; order: Order | null }
+  | { status: "loading" }
+  | { status: "done"; order: Order | null };
+
+type FetchAction =
+  | { type: "start" }
+  | { type: "done"; order: Order | null };
+
+function fetchReducer(_: FetchState, action: FetchAction): FetchState {
+  if (action.type === "start") return { status: "loading" };
+  return { status: "done", order: action.order };
+}
+
+function ConfirmationInner() {
+  const { lastOrder } = useCheckout();
+  const params = useSearchParams();
+  const [state, dispatch] = useReducer(fetchReducer, { status: "idle", order: null });
+
+  const number = params.get("o");
+
+  useEffect(() => {
+    if (lastOrder || !number) return;
+    // Token rides in the URL fragment so it's never sent to servers / Referer / logs,
+    // while staying shareable and refresh-proof. Read it imperatively (client-only)
+    // to avoid an SSR/hydration mismatch from touching window during render.
+    const hash = window.location.hash; // e.g. "#t=<uuid>"
+    const token = hash.startsWith("#t=") ? decodeURIComponent(hash.slice(3)) : null;
+    dispatch({ type: "start" });
+    getOrderForConfirmation({ number, token })
+      .then((order) => dispatch({ type: "done", order }))
+      .catch(() => dispatch({ type: "done", order: null }));
+  }, [lastOrder, number]);
+
+  const o = lastOrder ?? (state.status === "done" ? state.order : null);
+
+  if (state.status === "loading") return <div className="h-64 animate-fade" aria-busy />;
+  if (!o) {
     return (
       <div className="mx-auto max-w-md border border-ink-12 bg-white px-8 py-16 text-center">
         <h1 className="type-display text-3xl text-navy-800">No recent order</h1>
@@ -32,8 +71,6 @@ export default function ConfirmationPage() {
       </div>
     );
   }
-
-  const o = lastOrder;
 
   return (
     <div>
@@ -66,12 +103,21 @@ export default function ConfirmationPage() {
           />
           <InfoTile
             Icon={TruckIcon}
-            title={`Payment · ${METHOD_LABEL[o.paymentMethod]}`}
+            title={o.paymentMethod === "cod" ? "Payment · Cash on Delivery" : "Payment · Online"}
             lines={[
-              o.paymentStatus === "cod_pending" ? "Pay on delivery" : "Paid",
+              o.paymentStatus === "paid"
+                ? "Paid"
+                : o.paymentStatus === "cod_pending"
+                  ? "Pay on delivery"
+                  : "Awaiting payment",
               "Dispatch in 24–48h",
             ]}
           />
+        </div>
+
+        {/* timeline */}
+        <div className="mt-4">
+          <OrderTimeline current={0} />
         </div>
 
         {/* items */}
