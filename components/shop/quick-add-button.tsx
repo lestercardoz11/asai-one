@@ -2,7 +2,6 @@
 
 import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart/cart-context";
-import { toast } from "@/components/ui/toast";
 import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui/button";
 
 /**
@@ -23,7 +22,7 @@ export function QuickAddButton({
   full?: boolean;
   label?: string;
 }) {
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
   const defaultVariant =
     product.variants.find((v) => v.id === product.defaultVariantId) ??
     product.variants[0];
@@ -49,13 +48,7 @@ export function QuickAddButton({
           unitPrice: defaultVariant.price,
           compareAtPrice: defaultVariant.compareAtPrice,
         });
-        toast({
-          title: "Added to cart",
-          description: hasChoices
-            ? `${product.title} · ${defaultVariant.label}`
-            : product.title,
-          variant: "success",
-        });
+        openCart();
       }}
     >
       {label ?? (hasChoices ? "Quick Add" : "Add to Cart")}

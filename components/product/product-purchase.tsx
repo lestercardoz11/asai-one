@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { Product, VariantSelection } from "@/lib/types";
 import { resolveVariant, isValueAvailable, defaultSelection } from "@/lib/variants";
 import { useCart } from "@/lib/cart/cart-context";
-import { toast } from "@/components/ui/toast";
 import { formatINR, discountPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { QuantitySelector } from "@/components/ui/quantity-selector";
 import { CheckIcon } from "@/components/icons";
 
 export function ProductPurchase({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
   const [selection, setSelection] = useState<VariantSelection>(() =>
     defaultSelection(product),
   );
@@ -48,14 +47,7 @@ export function ProductPurchase({ product }: { product: Product }) {
       },
       qty,
     );
-    toast({
-      title: "Added to cart",
-      description:
-        product.variants.length > 1
-          ? `${product.title} · ${variant.label} × ${qty}`
-          : `${product.title} × ${qty}`,
-      variant: "success",
-    });
+    openCart();
   };
 
   return (

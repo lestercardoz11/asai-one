@@ -25,7 +25,7 @@ const NAV = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { itemCount, ready } = useCart();
+  const { itemCount, ready, openCart } = useCart();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [authed, setAuthed] = useState(false);
@@ -228,9 +228,10 @@ export function SiteHeader() {
                 <UserIcon className="h-5 w-5" />
               </Link>
             )}
-            <Link
-              href="/cart"
-              aria-label={`Cart, ${ready ? itemCount : 0} items`}
+            <button
+              type="button"
+              onClick={openCart}
+              aria-label={`Open cart, ${ready ? itemCount : 0} items`}
               className="relative grid h-10 w-10 place-items-center text-navy-800 transition-colors hover:bg-navy-50"
             >
               <CartIcon className="h-5 w-5" />
@@ -239,7 +240,7 @@ export function SiteHeader() {
                   {itemCount}
                 </span>
               )}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
