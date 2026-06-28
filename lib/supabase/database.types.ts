@@ -1,7 +1,4 @@
-// Generated from the Supabase schema (post schema-rebuild). Do not edit by hand —
-// regenerate via the Supabase MCP generate_typescript_types after schema changes.
-
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -806,6 +803,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          access_token: string
           billing_address: Json | null
           cancelled_at: string | null
           confirmed_at: string | null
@@ -831,6 +829,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          access_token?: string
           billing_address?: Json | null
           cancelled_at?: string | null
           confirmed_at?: string | null
@@ -856,6 +855,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          access_token?: string
           billing_address?: Json | null
           cancelled_at?: string | null
           confirmed_at?: string | null

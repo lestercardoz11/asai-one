@@ -78,6 +78,10 @@ export const orders = pgTable(
     billingAddress: jsonb("billing_address"),
     notes: text("notes"),
     idempotencyKey: text("idempotency_key"),
+    // Random per-order token: lets a guest reload/share their confirmation page
+    // without auth. Read only via the service-role confirmation action — never
+    // selected by anon directly, so no RLS grant change is required.
+    accessToken: uuid("access_token").notNull().defaultRandom(),
     placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
     shippedAt: timestamp("shipped_at", { withTimezone: true }),
