@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatINR } from "@/lib/format";
 import { StatusBadge } from "@/components/admin/order-status";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { Card } from "@/components/admin/ui/card";
 
 const FILTERS = [
   "all",
@@ -33,14 +35,14 @@ export default async function AdminOrders({
   const { data: orders } = await query.order("placed_at", { ascending: false }).limit(100);
 
   return (
-    <div>
-      <h1 className="type-display text-4xl text-navy-800">Orders</h1>
-      <p className="mt-1 text-sm text-ink-60">
-        Open an order to see its details and move it through the fulfilment workflow.
-      </p>
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title="Orders"
+        description="Open an order to see its details and move it through the fulfilment workflow."
+      />
 
       {/* Status filter */}
-      <div className="mt-6 flex flex-wrap gap-1">
+      <div className="mb-4 flex flex-wrap gap-1">
         {FILTERS.map((f) => {
           const active = f === filter;
           return (
@@ -59,7 +61,8 @@ export default async function AdminOrders({
         })}
       </div>
 
-      <div className="mt-4 overflow-x-auto border border-ink-12 bg-white">
+      <Card padded={false}>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ink-12 text-left type-mono text-[10px] uppercase text-ink-30">
@@ -105,7 +108,8 @@ export default async function AdminOrders({
             )}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }
