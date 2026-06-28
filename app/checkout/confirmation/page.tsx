@@ -105,7 +105,11 @@ function ConfirmationInner() {
             Icon={TruckIcon}
             title={o.paymentMethod === "cod" ? "Payment · Cash on Delivery" : "Payment · Online"}
             lines={[
-              o.paymentStatus === "cod_pending" ? "Pay on delivery" : "Paid",
+              o.paymentStatus === "paid"
+                ? "Paid"
+                : o.paymentStatus === "cod_pending"
+                  ? "Pay on delivery"
+                  : "Awaiting payment",
               "Dispatch in 24–48h",
             ]}
           />

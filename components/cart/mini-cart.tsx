@@ -52,6 +52,7 @@ export function MiniCart() {
         drawerOpen ? "pointer-events-auto" : "pointer-events-none",
       )}
       aria-hidden={!drawerOpen}
+      inert={!drawerOpen}
     >
       <div
         className={cn(
@@ -98,7 +99,7 @@ export function MiniCart() {
           </div>
         ) : (
           <>
-            <div className="border-b border-ink-12 px-5 py-4">
+            <div className="px-5 py-4">
               <FreeShipBar />
             </div>
             <ul className="flex-1 divide-y divide-ink-12 overflow-y-auto px-5">
