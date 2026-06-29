@@ -2,20 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser, getIsAdmin } from "@/lib/auth/user";
-import { LogoutButton } from "@/components/auth/logout-button";
+import { AdminSidebar } from "@/components/admin/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "Admin",
   robots: { index: false, follow: false },
 };
-
-const NAV = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/customers", label: "Customers" },
-  { href: "/admin/content", label: "Content" },
-];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
@@ -35,24 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="grid min-h-[70vh] grid-cols-1 lg:grid-cols-[220px_1fr]">
       <aside className="border-b border-ink-12 bg-navy-900 text-navy-100 lg:border-b-0 lg:border-r">
-        <div className="px-5 py-5">
-          <p className="type-mono text-[10px] text-navy-200">ASAI.One</p>
-          <p className="type-condensed text-sm text-white">Admin</p>
-        </div>
-        <nav className="flex flex-wrap gap-1 px-3 pb-4 lg:flex-col">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="px-2.5 py-2 type-condensed text-xs text-navy-200 transition-colors hover:bg-navy-800 hover:text-white"
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="px-3 pb-5">
-          <LogoutButton className="px-2.5 py-2 type-mono text-[10px] text-navy-200 hover:text-white" />
-        </div>
+        <AdminSidebar />
       </aside>
       <main className="bg-near-white px-5 py-8 sm:px-8">{children}</main>
     </div>

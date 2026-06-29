@@ -2,6 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteProduct } from "@/lib/admin/actions";
 import { formatINR } from "@/lib/format";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { Card } from "@/components/admin/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function AdminProducts() {
   const supabase = await createClient();
@@ -14,17 +17,17 @@ export default async function AdminProducts() {
     .order("name");
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h1 className="type-display text-4xl text-navy-800">Products</h1>
-        <Link
-          href="/admin/products/new"
-          className="type-condensed text-xs text-navy-500 hover:text-navy-800"
-        >
-          + New product
-        </Link>
-      </div>
-      <div className="mt-8 overflow-x-auto border border-ink-12 bg-white">
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title="Products"
+        actions={
+          <Link href="/admin/products/new" className={buttonVariants({ size: "sm" })}>
+            + New product
+          </Link>
+        }
+      />
+      <Card padded={false}>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ink-12 text-left type-mono text-[10px] uppercase text-ink-30">
@@ -72,7 +75,8 @@ export default async function AdminProducts() {
             })}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }

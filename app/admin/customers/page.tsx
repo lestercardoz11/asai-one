@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { setAdminRole } from "@/lib/admin/actions";
+import { PageHeader } from "@/components/admin/ui/page-header";
+import { Card } from "@/components/admin/ui/card";
 
 export default async function AdminCustomers() {
   const supabase = await createClient();
@@ -18,9 +20,13 @@ export default async function AdminCustomers() {
   );
 
   return (
-    <div>
-      <h1 className="type-display text-4xl text-navy-800">Customers</h1>
-      <div className="mt-8 overflow-x-auto border border-ink-12 bg-white">
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        title="Customers"
+        description="Grant or revoke admin access. Admin status takes effect on the user's next sign-in."
+      />
+      <Card padded={false}>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-ink-12 text-left type-mono text-[10px] uppercase text-ink-30">
@@ -56,7 +62,8 @@ export default async function AdminCustomers() {
             })}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }
